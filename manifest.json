@@ -3,8 +3,8 @@
   "name": "Obsidian Alembic",
   "version": "1.0.0",
   "minAppVersion": "0.15.0",
-  "description": "Run Claude Code CLI workflows on your Obsidian notes.",
-  "author": "",
-  "authorUrl": "",
+  "description": "Sane AI writing workflow tool for Obsidian. Workflows live in your vault as Markdown files — edit, share, and run them on any note.",
+  "author": "Scott E. Detweiler",
+  "authorUrl": "https://github.com/sedetweiler",
   "isDesktopOnly": true
 }
