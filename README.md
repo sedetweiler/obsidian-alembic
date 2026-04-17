@@ -101,6 +101,7 @@ Selecting **Ask Claude** from the picker opens a text box where you type a one-o
 | **Extract Key Terms** | Pulls domain-specific terms, proper nouns, and acronyms with context-specific definitions. |
 | **Convert to Table** | Converts structured text or lists into a Markdown table. |
 | **Humanize** | Strips AI writing patterns: removes cliches, overused vocabulary, em dashes, sycophantic openers, and soulless structure. Used automatically by workflows with "Humanize output" enabled. |
+| **Copywriting** | Writes conversion-focused marketing copy from a brief: headlines, subheadline, body, and CTA. Emphasises benefits over features and customer language over jargon. |
 
 ---
 
@@ -158,6 +159,18 @@ If you leave `prompt` blank, Alembic sends whatever is available: selected text 
 **From settings:** click **+** in the Workflows sidebar. A new file called `New Workflow.md` is created in your workflows folder. Edit the frontmatter and body, hit Save, and the workflow is immediately available.
 
 **Directly in the vault:** create any `.md` file in your workflows folder with valid frontmatter (the `id` field is required and must be unique). Alembic picks it up automatically, no restart needed.
+
+---
+
+## Updating workflows
+
+Two buttons in **Settings → Alembic → Workflows** help you stay current.
+
+**Reset to default** appears at the bottom of the detail panel for any built-in workflow. It overwrites that file with the prompt bundled in your installed version. Use it to undo edits you don't want to keep, or to pick up prompt improvements that shipped with a plugin update. Works offline.
+
+**↓ Pull new workflows** sits at the bottom of the workflow list. It checks the plugin's GitHub repo and adds any workflows that don't already exist in your vault. It never touches files you already have, including ones you've edited. Requires an internet connection.
+
+Neither button affects workflows you've created yourself.
 
 ---
 
