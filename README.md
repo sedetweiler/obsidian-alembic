@@ -80,7 +80,7 @@ Every workflow is also registered as its own command: **Alembic: [Workflow Name]
 
 ### Freeform (Ask Claude)
 
-Selecting **Ask Claude** from the picker opens a text box where you type a one-off instruction. The current note is always included as context. Use the **Humanize output** toggle to run the result through the Humanize workflow automatically.  Your prompt here needs to assume it can see the contents, otherwise it will get confused.  For example, asking it to check the current file will cause it to ask you about a file path.  It's just weird that way.
+Selecting **Ask Claude** from the picker opens a text box where you type a one-off instruction. The current note is always included as context. Use the **Humanize output** toggle to run the result through the Humanize workflow automatically.
 
 ---
 
@@ -190,7 +190,7 @@ The PR diff shows the prompt text directly. Reviewers can read it, suggest edits
 **What makes a PR worth merging:**
 
 - **One job.** The best workflows have a clear input, a clear output, and no ambiguity about when to run them. If you can't describe it in one sentence, split it.
-- **A stable `name`.** Use something specific like `contrib-workflow-name`. The `name` must not change after a workflow ships, so get it right before the PR merges.
+- **A stable `id`.** Use something specific like `contrib-workflow-name`. The `id` must not change after a workflow ships, so get it right before the PR merges.
 - **`providerId: "default-claude-cli"`** for portability. Users can override it in their own copy. The default should work for anyone without extra setup.
 - **No preambles in the output.** Write the system prompt so the AI's only job is producing the deliverable. "Here is the result" and similar openers are bugs, not features.
 
