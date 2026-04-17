@@ -2,6 +2,9 @@
 
 AI writing workflows for Obsidian, with prompts you actually own. Workflows live in your vault as Markdown files: edit them, share them, run them on any note.
 
+<img width="833" height="865" alt="the workflow panel" src="https://github.com/user-attachments/assets/d25f010b-9711-41c2-8c0e-5ac625a80f4b" />
+
+
 ---
 
 ## Quick start
@@ -69,6 +72,8 @@ Enter your API key from [openrouter.ai](https://openrouter.ai). One key covers d
 ---
 
 ## Running workflows
+<img width="482" height="372" alt="image" src="https://github.com/user-attachments/assets/99e4d806-eef7-4de1-920d-287f93480e3c" />
+
 
 ### Command palette
 
