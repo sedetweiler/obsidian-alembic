@@ -1,0 +1,556 @@
+/* ── Themed notices ──────────────────────────────── */
+
+.alembic-notice {
+  border-left: 3px solid var(--interactive-accent);
+  padding-left: 12px !important;
+}
+
+.alembic-notice--error {
+  border-left-color: var(--color-red);
+}
+
+.alembic-notice--success {
+  border-left-color: var(--color-green);
+}
+
+.alembic-notice-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 5px;
+}
+
+.alembic-notice-icon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.alembic-notice-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.alembic-notice-status {
+  font-size: 14px;
+  color: var(--text-normal);
+  margin-bottom: 2px;
+}
+
+.alembic-notice-body {
+  font-size: 13px;
+  color: var(--text-normal);
+  line-height: 1.4;
+}
+
+/* ── Cancel button inside Notice ────────────────── */
+
+.alembic-cancel-btn {
+  display: block;
+  margin-top: 8px;
+  background: none;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-s);
+  color: var(--text-muted);
+  opacity: 0.7;
+  padding: 3px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.alembic-cancel-btn:hover {
+  opacity: 1;
+}
+
+/* ── Tab bar ─────────────────────────────────────── */
+
+.alembic-settings .alembic-tab-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.alembic-settings .alembic-discord-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  font-size: 12px;
+  color: #5865F2;
+  text-decoration: none;
+  opacity: 0.85;
+  transition: opacity 0.15s;
+}
+
+.alembic-settings .alembic-discord-link:hover {
+  opacity: 1;
+  text-decoration: none;
+}
+
+.alembic-discord-icon {
+  width: 16px;
+  height: 16px;
+  fill: #5865F2;
+  flex-shrink: 0;
+}
+
+.alembic-settings .alembic-tab-btn {
+  background: none;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  color: var(--text-muted);
+  padding: 4px 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.alembic-settings .alembic-tab-btn.alembic-tab-active {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-color: var(--interactive-accent);
+}
+
+/* ── Provider connect button ─────────────────────── */
+
+.alembic-settings .alembic-connect-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.alembic-settings .alembic-connect-btn {
+  background: var(--background-modifier-hover);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  color: var(--text-normal);
+  padding: 5px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.alembic-settings .alembic-connect-btn:hover {
+  background: var(--background-modifier-border);
+}
+
+.alembic-settings .alembic-connect-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.alembic-settings .alembic-connect-status {
+  font-size: 12px;
+}
+
+.alembic-settings .alembic-status-ok {
+  color: var(--color-green);
+}
+
+.alembic-settings .alembic-status-error {
+  color: var(--color-red);
+}
+
+/* ── Select ──────────────────────────────────────── */
+
+.alembic-settings .alembic-select {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: 13px;
+}
+
+/* ── Settings layout ─────────────────────────────── */
+
+.alembic-settings .alembic-layout {
+  display: flex;
+  min-height: 400px;
+}
+
+.alembic-settings .alembic-sidebar {
+  width: 200px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--background-modifier-border);
+  display: flex;
+  flex-direction: column;
+}
+
+.alembic-settings .alembic-sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.alembic-settings .alembic-sidebar-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.alembic-settings .alembic-add-btn {
+  background: none;
+  border: none;
+  color: var(--interactive-accent);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.alembic-settings .alembic-add-btn:hover {
+  color: var(--interactive-accent-hover);
+}
+
+.alembic-settings .alembic-restore-btn {
+  display: block;
+  width: calc(100% - 16px);
+  margin: 8px 8px 4px;
+  padding: 4px 0;
+  background: none;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  color: var(--text-muted);
+  font-size: 11px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.alembic-settings .alembic-restore-btn:hover {
+  border-color: var(--text-muted);
+  color: var(--text-normal);
+}
+
+.alembic-settings .alembic-restore-btn-confirm {
+  border-color: var(--color-red);
+  color: var(--color-red);
+}
+
+.alembic-settings ul.alembic-sidebar-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.alembic-settings .alembic-sidebar-item {
+  padding: 9px 14px;
+  cursor: pointer;
+  color: var(--text-muted);
+  border-left: 3px solid transparent;
+  transition: background 0.1s, color 0.1s;
+  font-size: 13px;
+}
+
+.alembic-settings .alembic-sidebar-item:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.alembic-settings .alembic-sidebar-item.alembic-active {
+  color: var(--text-normal);
+  border-left-color: var(--interactive-accent);
+  background: var(--background-modifier-hover);
+}
+
+.alembic-settings .alembic-detail {
+  flex: 1;
+  padding: 8px 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Stacked field groups ───────────────────────── */
+
+.alembic-settings .alembic-field {
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.alembic-settings .alembic-field-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.alembic-settings .alembic-field-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.alembic-settings .alembic-input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: 14px;
+}
+
+.alembic-settings .alembic-textarea {
+  width: 100%;
+  height: 80px !important;
+  min-height: 80px !important;
+  padding: 6px 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: 13px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.alembic-settings .alembic-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.alembic-settings .alembic-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--interactive-accent);
+}
+
+.alembic-settings .alembic-toggle-text {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.alembic-settings .alembic-empty-detail {
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: 24px;
+}
+
+.alembic-settings .alembic-button-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.alembic-settings .alembic-reset-btn {
+  background: none;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  color: var(--text-muted);
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.alembic-settings .alembic-reset-btn:hover {
+  border-color: var(--text-muted);
+  color: var(--text-normal);
+}
+
+.alembic-settings .alembic-delete-btn {
+  background: var(--background-modifier-error);
+  color: var(--text-error);
+  border: none;
+  border-radius: var(--radius-m);
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.alembic-settings .alembic-delete-btn:hover {
+  background: var(--background-modifier-error-hover);
+}
+
+.alembic-settings .alembic-save-btn {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border: none;
+  border-radius: var(--radius-m);
+  padding: 6px 16px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.alembic-settings .alembic-save-btn:hover {
+  background: var(--interactive-accent-hover);
+}
+
+/* ── Workflow selector modal ─────────────────────── */
+
+.alembic-suggestion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.alembic-suggestion-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.alembic-suggestion-freeform {
+  border-bottom: 1px solid var(--background-modifier-border);
+  margin-bottom: 2px;
+}
+
+.alembic-suggestion-hotkey {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--text-faint);
+  background: var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  padding: 1px 5px;
+  font-family: var(--font-monospace);
+  letter-spacing: 0.03em;
+}
+
+/* ── Freeform prompt modal ───────────────────────── */
+
+.alembic-freeform-modal .alembic-freeform-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-normal);
+  margin: 0 0 12px 0;
+}
+
+.alembic-freeform-modal .alembic-freeform-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  display: block;
+  box-sizing: border-box;
+}
+
+.alembic-freeform-modal .alembic-freeform-humanize {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.alembic-freeform-modal .alembic-run-btn {
+  margin-top: 10px;
+  float: right;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border: none;
+  border-radius: var(--radius-m);
+  padding: 6px 18px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.alembic-freeform-modal .alembic-run-btn:hover {
+  background: var(--interactive-accent-hover);
+}
+
+/* ── Workflows folder bar ────────────────────────────────────────── */
+
+.alembic-settings .alembic-folder-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0 12px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  margin-bottom: 0;
+}
+
+.alembic-settings .alembic-folder-bar-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.alembic-settings .alembic-folder-bar-input {
+  flex: 1;
+  max-width: 240px;
+  font-size: 12px;
+  padding: 4px 8px;
+}
+
+/* ── Model chips ─────────────────────────────────────────────────── */
+
+.alembic-settings .alembic-model-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.alembic-settings .alembic-model-chip {
+  background: var(--background-modifier-border);
+  border: 1px solid transparent;
+  border-radius: var(--radius-s);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-family: var(--font-monospace);
+  padding: 2px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.alembic-settings .alembic-model-chip:hover {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+/* ── Workflow detail extras ──────────────────────────────────────── */
+
+.alembic-settings .alembic-folder-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.alembic-settings .alembic-folder-input {
+  flex: 1;
+}
+
+.alembic-settings .alembic-open-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.alembic-settings .alembic-file-path {
+  font-size: 11px;
+  color: var(--text-faint);
+  font-family: var(--font-monospace);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

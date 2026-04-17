@@ -1,0 +1,4 @@
+node_modules/
+
+# User settings — contains API keys and local paths
+data.json
