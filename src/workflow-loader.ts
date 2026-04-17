@@ -187,7 +187,15 @@ export async function pullNewWorkflowsFromRepo(
       url: apiUrl,
       headers: { 'User-Agent': 'obsidian-alembic' },
     });
-    const files = listing.json as { name: string; download_url: string; type: string }[];
+
+    // GitHub returns a JSON object (not array) on error, e.g. {"message":"Not Found"}
+    const body = listing.json;
+    if (!Array.isArray(body)) {
+      const msg = (body as { message?: string })?.message ?? `HTTP ${listing.status}`;
+      return { added: [], error: msg };
+    }
+
+    const files = body as { name: string; download_url: string; type: string }[];
     const mdFiles = files.filter(f => f.type === 'file' && f.name.endsWith('.md'));
 
     const added: string[] = [];
@@ -202,6 +210,12 @@ export async function pullNewWorkflowsFromRepo(
     }
     return { added };
   } catch (err) {
+    // requestUrl throws the response object (not an Error) on 4xx/5xx.
+    // Extract the status code if present, otherwise fall back to the message.
+    const status = (err as { status?: number })?.status;
+    if (status !== undefined) {
+      return { added: [], error: `HTTP ${status}` };
+    }
     return { added: [], error: (err as Error).message ?? String(err) };
   }
 }
