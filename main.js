@@ -1123,10 +1123,16 @@ async function ensureWorkflowsFolder(app, folder) {
   }
 }
 async function writeDefaultWorkflows(app, folder) {
+  var _a2;
   for (const [filename, content] of Object.entries(alembic_default_workflows_default)) {
     const path = `${folder}/${filename}`;
     if (!app.vault.getAbstractFileByPath(path)) {
-      await app.vault.create(path, content);
+      try {
+        await app.vault.create(path, content);
+      } catch (e) {
+        if (!((_a2 = e.message) == null ? void 0 : _a2.includes("already exists")))
+          throw e;
+      }
     }
   }
 }

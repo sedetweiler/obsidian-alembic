@@ -142,7 +142,13 @@ export async function writeDefaultWorkflows(app: App, folder: string): Promise<v
   for (const [filename, content] of Object.entries(BUNDLED_WORKFLOWS)) {
     const path = `${folder}/${filename}`;
     if (!app.vault.getAbstractFileByPath(path)) {
-      await app.vault.create(path, content);
+      try {
+        await app.vault.create(path, content);
+      } catch (e) {
+        // Vault index may not be fully ready at load time — skip files that
+        // already exist but weren't visible via getAbstractFileByPath yet.
+        if (!(e as Error).message?.includes('already exists')) throw e;
+      }
     }
   }
 }
