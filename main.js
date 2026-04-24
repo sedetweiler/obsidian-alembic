@@ -1786,7 +1786,8 @@ ${prompt}`, humanize });
       run.hide();
     };
     try {
-      const handle = runWithProvider(profile, workflow, userMessage);
+      const resolvedWorkflow = { ...workflow, systemPrompt: substituteTokens(workflow.systemPrompt, selection, context) };
+      const handle = runWithProvider(profile, resolvedWorkflow, userMessage);
       cancelCurrent = handle.cancel;
       let result = await handle.promise;
       if (result.cancelled) {
