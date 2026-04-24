@@ -29,8 +29,7 @@ Alembic is a desktop-only plugin (it shells out to CLI tools and makes direct HT
 1. Install [BRAT](https://github.com/TfTHacker/obsidian42-brat)
 2. Add the Alembic repository URL
 3. Enable the plugin
-4. Note that on a MAC, you need to be sure Claude is in the PATH.
-use `! echo /opt/homebrew/bin | sudo tee /etc/paths.d/homebrew `
+4. On macOS, Obsidian's PATH does not include Homebrew by default. The plugin handles this automatically — no manual PATH configuration needed.
 
 ---
 

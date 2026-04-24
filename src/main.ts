@@ -2,7 +2,7 @@ import { Editor, Plugin, TFile } from 'obsidian';
 import { AlembicSettings, AlembicWorkflow, CLAUDE_CLI_PROVIDER_ID, DEFAULT_PROVIDERS, DEFAULT_SETTINGS, DEFAULT_WORKFLOWS_FOLDER, FREEFORM_WORKFLOW_ID, HUMANIZE_WORKFLOW_ID } from './types';
 import { WorkflowSelectorModal, FreeformModal } from './modal';
 import { AlembicSettingTab } from './settings';
-import { assembleUserMessage, runWithProvider } from './runner';
+import { assembleUserMessage, runWithProvider, substituteTokens } from './runner';
 import { ensureWorkflowsFolder, loadWorkflowsFromVault, writeDefaultWorkflows, writeWorkflowFile, defaultFilenameFor } from './workflow-loader';
 import { alembicFlash, alembicRunNotice, WAIT_MESSAGES } from './notice';
 
@@ -151,7 +151,8 @@ export default class AlembicPlugin extends Plugin {
     const finish = () => { clearInterval(ticker); run.hide(); };
 
     try {
-      const handle = runWithProvider(profile, workflow, userMessage);
+      const resolvedWorkflow = { ...workflow, systemPrompt: substituteTokens(workflow.systemPrompt, selection, context) };
+      const handle = runWithProvider(profile, resolvedWorkflow, userMessage);
       cancelCurrent = handle.cancel;
       let result = await handle.promise;
 
