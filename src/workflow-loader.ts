@@ -122,8 +122,15 @@ export async function writeWorkflowFile(
 export async function ensureWorkflowsFolder(app: App, folder: string): Promise<boolean> {
   const existing = app.vault.getAbstractFileByPath(folder);
   if (existing instanceof TFolder) return false;
-  await app.vault.createFolder(folder);
-  return true;
+  try {
+    await app.vault.createFolder(folder);
+    return true;
+  } catch (e) {
+    // Vault may not be fully indexed yet at plugin load time — if the folder
+    // already exists, getAbstractFileByPath returns null but createFolder throws.
+    if ((e as Error).message?.includes('already exists')) return false;
+    throw e;
+  }
 }
 
 /**

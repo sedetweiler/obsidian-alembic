@@ -3,6 +3,15 @@ import * as http from 'http';
 import * as https from 'https';
 import { AlembicWorkflow, ProviderProfile } from './types';
 
+// GUI apps on macOS inherit a minimal PATH that excludes Homebrew and other
+// common install locations. Augment it so CLI tools like `claude` and `gemini`
+// can be found when spawned from Obsidian.
+const AUGMENTED_PATH = [
+  '/opt/homebrew/bin',   // Homebrew (Apple Silicon)
+  '/usr/local/bin',      // Homebrew (Intel) / manual installs
+  process.env.PATH ?? '',
+].filter(Boolean).join(':');
+
 // ── Token substitution ────────────────────────────────────────────────────────
 
 export function substituteTokens(template: string, selection: string, context: string): string {
@@ -135,7 +144,7 @@ function cliRunHandle(cmd: string, args: string[], input: string, notFoundMessag
     const settle = (r: RunResult) => { if (!settled) { settled = true; resolve(r); } };
 
     try {
-      proc = spawn(cmd, args, { stdio: ['pipe', 'pipe', 'pipe'] });
+      proc = spawn(cmd, args, { stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, PATH: AUGMENTED_PATH } });
     } catch (err: unknown) {
       const e = err as NodeJS.ErrnoException;
       settle({ output: '', error: e.code === 'ENOENT' ? notFoundMessage : (e.message ?? String(err)) });
@@ -318,7 +327,7 @@ export interface ModelFetchResult {
 /** Probes whether a CLI binary is on PATH by running `<cmd> --version`. */
 function cliOnPath(cmd: string): Promise<boolean> {
   return new Promise((resolve) => {
-    const proc = spawn(cmd, ['--version'], { stdio: ['ignore', 'pipe', 'pipe'] });
+    const proc = spawn(cmd, ['--version'], { stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, PATH: AUGMENTED_PATH } });
     proc.on('close', (code) => resolve(code === 0));
     proc.on('error', () => resolve(false));
   });
