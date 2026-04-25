@@ -1,7 +1,10 @@
 ---
 name: "➡️ Continue Writing"
 id: "default-continue"
-prompt: "{=CONTEXT=}"
+prompt: "Consider the following text
+{=CONTEXT=}
+---
+Now continue writing."
 replaceSelection: false
 humanize: true
 providerId: "default-claude-cli"
