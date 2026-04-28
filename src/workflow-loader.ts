@@ -31,6 +31,7 @@ export function workflowToMarkdown(workflow: AlembicWorkflow): string {
     `replaceSelection: ${workflow.replaceSelection}`,
     `humanize: ${workflow.humanize}`,
     `providerId: ${JSON.stringify(workflow.providerId)}`,
+    `linkDepth: ${workflow.linkDepth}`,
     '---',
     '',
     workflow.systemPrompt,
@@ -53,6 +54,7 @@ export function markdownToWorkflow(content: string): AlembicWorkflow | null {
 
     const body = lines.slice(closeIdx + 1).join('\n').replace(/^\n/, '');
 
+    const rawDepth = fm.linkDepth != null ? Number(fm.linkDepth) : 0;
     return {
       id,
       name:            fm.name        != null ? String(fm.name)        : 'Unnamed',
@@ -61,6 +63,7 @@ export function markdownToWorkflow(content: string): AlembicWorkflow | null {
       replaceSelection: Boolean(fm.replaceSelection),
       humanize:        Boolean(fm.humanize),
       providerId:      fm.providerId  != null ? String(fm.providerId)  : CLAUDE_CLI_PROVIDER_ID,
+      linkDepth:       Math.min(3, Math.max(0, isNaN(rawDepth) ? 0 : rawDepth)),
     };
   } catch {
     return null;

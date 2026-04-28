@@ -164,6 +164,7 @@ export class AlembicSettingTab extends PluginSettingTab {
         replaceSelection: false,
         humanize: false,
         providerId: CLAUDE_CLI_PROVIDER_ID,
+        linkDepth: 0,
       };
       await writeWorkflowFile(this.app, folder, filename, newWorkflow);
       await this.plugin.reloadWorkflows();
@@ -295,6 +296,15 @@ export class AlembicSettingTab extends PluginSettingTab {
     if (workflow.id !== HUMANIZE_WORKFLOW_ID) {
       this.createToggle(detail, 'Humanize output', 'Run a second pass through the Humanize workflow to strip AI-sounding language.', draft.humanize, v => { draft.humanize = v; });
     }
+
+    // Link depth
+    const linkDepthField = this.createField(detail, 'Link depth', 'How many levels of [[wikilinks]] to follow and include as context. 0 = none.');
+    const linkDepthSelect = linkDepthField.createEl('select', { cls: 'alembic-select' });
+    [0, 1, 2, 3].forEach(n => {
+      const opt = linkDepthSelect.createEl('option', { text: String(n), value: String(n) });
+      if (n === (draft.linkDepth ?? 0)) opt.selected = true;
+    });
+    linkDepthSelect.addEventListener('change', () => { draft.linkDepth = Number(linkDepthSelect.value); });
 
     // Buttons
     const buttonRow = detail.createDiv('alembic-button-row');
