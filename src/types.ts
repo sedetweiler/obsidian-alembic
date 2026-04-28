@@ -21,6 +21,7 @@ export interface AlembicWorkflow {
   replaceSelection: boolean;
   humanize: boolean;
   providerId: string;   // references a ProviderProfile.id
+  linkDepth: number;    // 0–3: how many levels of [[wikilinks]] to expand into context
 }
 
 // ── Settings ─────────────────────────────────────────────────────────────────

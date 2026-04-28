@@ -9,6 +9,7 @@ const baseWorkflow: AlembicWorkflow = {
   replaceSelection: false,
   humanize: false,
   providerId: 'default-claude-cli',
+  linkDepth: 0,
 };
 
 describe('substituteTokens', () => {

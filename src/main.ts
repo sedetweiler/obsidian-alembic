@@ -1,10 +1,40 @@
-import { Editor, Plugin, TFile } from 'obsidian';
+import { App, Editor, Plugin, TFile } from 'obsidian';
 import { AlembicSettings, AlembicWorkflow, CLAUDE_CLI_PROVIDER_ID, DEFAULT_PROVIDERS, DEFAULT_SETTINGS, DEFAULT_WORKFLOWS_FOLDER, FREEFORM_WORKFLOW_ID, HUMANIZE_WORKFLOW_ID } from './types';
 import { WorkflowSelectorModal, FreeformModal } from './modal';
 import { AlembicSettingTab } from './settings';
 import { assembleUserMessage, runWithProvider, substituteTokens } from './runner';
 import { ensureWorkflowsFolder, loadWorkflowsFromVault, writeDefaultWorkflows, writeWorkflowFile, defaultFilenameFor } from './workflow-loader';
 import { alembicFlash, alembicRunNotice, WAIT_MESSAGES } from './notice';
+
+/**
+ * Recursively expands [[wikilinks]] found in `content` up to `depth` levels.
+ * Each linked note's content is appended after the main content.
+ * `visited` prevents the same file from being included more than once.
+ */
+async function expandLinkedNotes(
+  app: App,
+  content: string,
+  depth: number,
+  visited: Set<string> = new Set(),
+): Promise<string> {
+  if (depth === 0) return content;
+
+  const wikiLinkRegex = /\[\[([^\]|#\n]+?)(?:[|#][^\]]*?)?\]\]/g;
+  const appended: string[] = [];
+  let match: RegExpExecArray | null;
+
+  while ((match = wikiLinkRegex.exec(content)) !== null) {
+    const linkTarget = match[1].trim();
+    const file = app.metadataCache.getFirstLinkpathDest(linkTarget, '');
+    if (!file || visited.has(file.path)) continue;
+    visited.add(file.path);
+    const linked = await app.vault.read(file);
+    const expanded = await expandLinkedNotes(app, linked, depth - 1, visited);
+    appended.push(`\n\n---\n**Linked note: ${file.basename}**\n\n${expanded}`);
+  }
+
+  return content + appended.join('');
+}
 
 export default class AlembicPlugin extends Plugin {
   settings!: AlembicSettings;
@@ -114,7 +144,10 @@ export default class AlembicPlugin extends Plugin {
 
   async executeWorkflow(editor: Editor, workflow: AlembicWorkflow): Promise<void> {
     const selection = editor.getSelection();
-    const context = editor.getValue();
+    const rawContext = editor.getValue();
+    const context = workflow.linkDepth > 0
+      ? await expandLinkedNotes(this.app, rawContext, workflow.linkDepth)
+      : rawContext;
 
     // Save selection bounds NOW — editor state can change during the async wait
     // (user clicks elsewhere, modal focus shift, etc.).  We use these coordinates

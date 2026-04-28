@@ -1045,6 +1045,7 @@ function workflowToMarkdown(workflow) {
     `replaceSelection: ${workflow.replaceSelection}`,
     `humanize: ${workflow.humanize}`,
     `providerId: ${JSON.stringify(workflow.providerId)}`,
+    `linkDepth: ${workflow.linkDepth}`,
     "---",
     "",
     workflow.systemPrompt
@@ -1065,6 +1066,7 @@ function markdownToWorkflow(content) {
     if (!id)
       return null;
     const body = lines.slice(closeIdx + 1).join("\n").replace(/^\n/, "");
+    const rawDepth = fm.linkDepth != null ? Number(fm.linkDepth) : 0;
     return {
       id,
       name: fm.name != null ? String(fm.name) : "Unnamed",
@@ -1072,7 +1074,8 @@ function markdownToWorkflow(content) {
       prompt: fm.prompt != null ? String(fm.prompt) : "",
       replaceSelection: Boolean(fm.replaceSelection),
       humanize: Boolean(fm.humanize),
-      providerId: fm.providerId != null ? String(fm.providerId) : CLAUDE_CLI_PROVIDER_ID
+      providerId: fm.providerId != null ? String(fm.providerId) : CLAUDE_CLI_PROVIDER_ID,
+      linkDepth: Math.min(3, Math.max(0, isNaN(rawDepth) ? 0 : rawDepth))
     };
   } catch (e) {
     return null;
@@ -1327,7 +1330,8 @@ var AlembicSettingTab = class extends import_obsidian4.PluginSettingTab {
         prompt: "",
         replaceSelection: false,
         humanize: false,
-        providerId: CLAUDE_CLI_PROVIDER_ID
+        providerId: CLAUDE_CLI_PROVIDER_ID,
+        linkDepth: 0
       };
       await writeWorkflowFile(this.app, folder, filename, newWorkflow);
       await this.plugin.reloadWorkflows();
@@ -1457,6 +1461,17 @@ var AlembicSettingTab = class extends import_obsidian4.PluginSettingTab {
         draft.humanize = v;
       });
     }
+    const linkDepthField = this.createField(detail, "Link depth", "How many levels of [[wikilinks]] to follow and include as context. 0 = none.");
+    const linkDepthSelect = linkDepthField.createEl("select", { cls: "alembic-select" });
+    [0, 1, 2, 3].forEach((n) => {
+      var _a3;
+      const opt = linkDepthSelect.createEl("option", { text: String(n), value: String(n) });
+      if (n === ((_a3 = draft.linkDepth) != null ? _a3 : 0))
+        opt.selected = true;
+    });
+    linkDepthSelect.addEventListener("change", () => {
+      draft.linkDepth = Number(linkDepthSelect.value);
+    });
     const buttonRow = detail.createDiv("alembic-button-row");
     const deleteBtn = buttonRow.createEl("button", { text: "Delete", cls: "alembic-delete-btn" });
     deleteBtn.addEventListener("click", async () => {
@@ -1665,6 +1680,29 @@ var AlembicSettingTab = class extends import_obsidian4.PluginSettingTab {
 };
 
 // src/main.ts
+async function expandLinkedNotes(app, content, depth, visited = /* @__PURE__ */ new Set()) {
+  if (depth === 0)
+    return content;
+  const wikiLinkRegex = /\[\[([^\]|#\n]+?)(?:[|#][^\]]*?)?\]\]/g;
+  const appended = [];
+  let match;
+  while ((match = wikiLinkRegex.exec(content)) !== null) {
+    const linkTarget = match[1].trim();
+    const file = app.metadataCache.getFirstLinkpathDest(linkTarget, "");
+    if (!file || visited.has(file.path))
+      continue;
+    visited.add(file.path);
+    const linked = await app.vault.read(file);
+    const expanded = await expandLinkedNotes(app, linked, depth - 1, visited);
+    appended.push(`
+
+---
+**Linked note: ${file.basename}**
+
+${expanded}`);
+  }
+  return content + appended.join("");
+}
 var AlembicPlugin = class extends import_obsidian5.Plugin {
   constructor() {
     super(...arguments);
@@ -1759,7 +1797,8 @@ ${prompt}`, humanize });
   async executeWorkflow(editor, workflow) {
     var _a2, _b;
     const selection = editor.getSelection();
-    const context = editor.getValue();
+    const rawContext = editor.getValue();
+    const context = workflow.linkDepth > 0 ? await expandLinkedNotes(this.app, rawContext, workflow.linkDepth) : rawContext;
     const selFrom = editor.getCursor("from");
     const selTo = editor.getCursor("to");
     const hasSelection = selection.trim().length > 0;
