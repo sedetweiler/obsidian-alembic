@@ -24,6 +24,18 @@ export interface AlembicWorkflow {
   linkDepth: number;    // 0–3: how many levels of [[wikilinks]] to expand into context
 }
 
+// ── Template tokens ──────────────────────────────────────────────────────────
+
+export const TOKEN_SELECTION = '{=SELECTION=}';
+export const TOKEN_CONTEXT   = '{=CONTEXT=}';
+
+/** A full-note workflow uses CONTEXT (not SELECTION) and replaces the entire document. */
+export function isFullNoteWorkflow(workflow: AlembicWorkflow): boolean {
+  return workflow.replaceSelection
+    && workflow.prompt.includes(TOKEN_CONTEXT)
+    && !workflow.prompt.includes(TOKEN_SELECTION);
+}
+
 // ── Settings ─────────────────────────────────────────────────────────────────
 
 export interface AlembicSettings {

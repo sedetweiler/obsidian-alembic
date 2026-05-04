@@ -36,6 +36,11 @@ module.exports = __toCommonJS(main_exports);
 var import_obsidian5 = require("obsidian");
 
 // src/types.ts
+var TOKEN_SELECTION = "{=SELECTION=}";
+var TOKEN_CONTEXT = "{=CONTEXT=}";
+function isFullNoteWorkflow(workflow) {
+  return workflow.replaceSelection && workflow.prompt.includes(TOKEN_CONTEXT) && !workflow.prompt.includes(TOKEN_SELECTION);
+}
 var CLAUDE_CLI_PROVIDER_ID = "default-claude-cli";
 var DEFAULT_PROVIDERS = [
   {
@@ -110,7 +115,7 @@ var WorkflowSelectorModal = class extends import_obsidian.FuzzySuggestModal {
   onChooseItem(item) {
     if (item.id === FREEFORM_WORKFLOW_ID) {
       new FreeformModal(this.app, item, (prompt, humanize) => {
-        this.onSelect({ ...item, prompt: `{=CONTEXT=}
+        this.onSelect({ ...item, prompt: `${TOKEN_CONTEXT}
 
 ---
 
@@ -293,7 +298,7 @@ var AUGMENTED_PATH = [
   (_a = process.env.PATH) != null ? _a : ""
 ].filter(Boolean).join(":");
 function substituteTokens(template, selection, context) {
-  return template.replace(/\{=SELECTION=\}/g, selection).replace(/\{=CONTEXT=\}/g, context);
+  return template.split(TOKEN_SELECTION).join(selection).split(TOKEN_CONTEXT).join(context);
 }
 function assembleUserMessage(workflow, selection, context) {
   if (workflow.prompt.trim() !== "") {
@@ -315,9 +320,10 @@ function classifyError(combined, rawMessage, code) {
     return "Service is overloaded right now \u2014 please try again shortly.";
   return rawMessage || `Exited with code ${code != null ? code : "unknown"}`;
 }
+var HTTP_TIMEOUT_MS = 12e4;
 function nodeRequest(url, options = {}) {
   return new Promise((resolve, reject) => {
-    var _a2;
+    var _a2, _b;
     const parsed = new URL(url);
     const lib = parsed.protocol === "https:" ? https : http;
     const req = lib.request(
@@ -326,7 +332,8 @@ function nodeRequest(url, options = {}) {
         port: parsed.port || (parsed.protocol === "https:" ? 443 : 80),
         path: parsed.pathname + parsed.search,
         method: (_a2 = options.method) != null ? _a2 : "GET",
-        headers: { "content-type": "application/json", ...options.headers }
+        headers: { "content-type": "application/json", ...options.headers },
+        timeout: (_b = options.timeoutMs) != null ? _b : HTTP_TIMEOUT_MS
       },
       (res) => {
         let data = "";
@@ -339,6 +346,10 @@ function nodeRequest(url, options = {}) {
         });
       }
     );
+    req.on("timeout", () => {
+      req.destroy();
+      reject(new Error("Request timed out \u2014 the provider did not respond within 2 minutes."));
+    });
     req.on("error", reject);
     if (options.body)
       req.write(options.body);
@@ -368,6 +379,7 @@ function httpRunHandle(run) {
     }
   };
 }
+var CLI_TIMEOUT_MS = 3e5;
 function cliRunHandle(cmd, args, input, notFoundMessage) {
   let settled = false;
   let proc = null;
@@ -378,6 +390,7 @@ function cliRunHandle(cmd, args, input, notFoundMessage) {
     const settle = (r) => {
       if (!settled) {
         settled = true;
+        clearTimeout(timer);
         resolve(r);
       }
     };
@@ -388,6 +401,10 @@ function cliRunHandle(cmd, args, input, notFoundMessage) {
       settle({ output: "", error: e.code === "ENOENT" ? notFoundMessage : (_a2 = e.message) != null ? _a2 : String(err) });
       return;
     }
+    const timer = setTimeout(() => {
+      proc == null ? void 0 : proc.kill();
+      settle({ output: "", error: `${cmd} did not respond within 5 minutes \u2014 the process was stopped.` });
+    }, CLI_TIMEOUT_MS);
     let stdout = "";
     let stderr = "";
     proc.stdout.on("data", (chunk) => {
@@ -642,10 +659,21 @@ Follow the instruction. Use the note content as your working material.
 
 The note content is already in this message. Never ask the user to paste, share, or describe it.
 `,
+  "Contextual Prompt.md": `---
+name: "\u27A1\uFE0F Context With Prompt"
+id: "continue-prompted"
+prompt: "Consider the following text\\n{=CONTEXT=}\\n---\\nNow follow this prompt while considering that context:\\n{=SELECTION=}"
+replaceSelection: false
+humanize: false
+providerId: "default-claude-cli"
+---
+
+You are a ghostwriter continuing someone else's work.
+`,
   "Continue Writing.md": `---
 name: "\u27A1\uFE0F Continue Writing"
 id: "default-continue"
-prompt: "{=CONTEXT=}"
+prompt: "Consider the following text{=CONTEXT=}---Now continue writing."
 replaceSelection: false
 humanize: true
 providerId: "default-claude-cli"
@@ -768,6 +796,9 @@ providerId: "default-claude-cli"
 
 You are a writer developing an idea from a seed into a full, substantive piece.
 
+Here is the full note for context reference:
+{=CONTEXT=}
+
 How to expand well:
 - Start by restating the core idea more precisely (often the original phrasing is vague)
 - Add the "why it matters" layer: what's the consequence, the implication, the stake?
@@ -797,6 +828,9 @@ providerId: "default-claude-cli"
 ---
 
 You are a professional editor. Your job is to improve the text while keeping it unmistakably the author's own.
+
+Here is the full note for voice and context reference:
+{=CONTEXT=}
 
 What to fix:
 - Grammar, spelling, and punctuation errors
@@ -1001,6 +1035,9 @@ providerId: "default-claude-cli"
 
 You are a ruthless copy editor. Your goal is maximum signal per word. Cut everything that doesn't earn its place.
 
+Here is the full note for context reference:
+{=CONTEXT=}
+
 Cut without mercy:
 - Throat-clearing openers ("In order to understand...", "It is important to note that...")
 - Redundant pairs ("each and every", "first and foremost", "various different")
@@ -1031,6 +1068,8 @@ var DEFAULT_FILENAMES = {
   "default-add-structure": "Add Structure.md",
   "default-expand": "Expand This.md",
   "default-continue": "Continue Writing.md",
+  "default-copywriting": "Copywriting.md",
+  "continue-prompted": "Contextual Prompt.md",
   "default-devils-advocate": "Devils Advocate.md",
   "default-key-terms": "Extract Key Terms.md",
   "default-to-table": "Convert to Table.md",
@@ -1066,7 +1105,7 @@ function markdownToWorkflow(content) {
     if (!id)
       return null;
     const body = lines.slice(closeIdx + 1).join("\n").replace(/^\n/, "");
-    const rawDepth = fm.linkDepth != null ? Number(fm.linkDepth) : 0;
+    const rawDepth = fm.linkDepth != null ? Number(fm.linkDepth) : 1;
     return {
       id,
       name: fm.name != null ? String(fm.name) : "Unnamed",
@@ -1084,12 +1123,13 @@ function markdownToWorkflow(content) {
 async function loadWorkflowsFromVault(app, folder) {
   const folderNode = app.vault.getAbstractFileByPath(folder);
   if (!(folderNode instanceof import_obsidian3.TFolder)) {
-    return { workflows: [], fileMap: /* @__PURE__ */ new Map() };
+    return { workflows: [], fileMap: /* @__PURE__ */ new Map(), skipped: [] };
   }
   const files = app.vault.getFiles().filter((f) => f.parent === folderNode && f.extension === "md").sort((a, b) => a.name.localeCompare(b.name));
   const workflows = [];
   const fileMap = /* @__PURE__ */ new Map();
   const seenIds = /* @__PURE__ */ new Set();
+  const skipped = [];
   for (const file of files) {
     const content = await app.vault.read(file);
     const wf = markdownToWorkflow(content);
@@ -1097,9 +1137,11 @@ async function loadWorkflowsFromVault(app, folder) {
       seenIds.add(wf.id);
       workflows.push(wf);
       fileMap.set(wf.id, file);
+    } else if (!wf) {
+      skipped.push(file.name);
     }
   }
-  return { workflows, fileMap };
+  return { workflows, fileMap, skipped };
 }
 async function writeWorkflowFile(app, folder, filename, workflow) {
   const path = `${folder}/${filename}`;
@@ -1207,6 +1249,7 @@ var AlembicSettingTab = class extends import_obsidian4.PluginSettingTab {
     this.activeTab = "workflows";
     this.activeWorkflowId = null;
     this.activeProviderId = null;
+    this.dirty = false;
     this.plugin = plugin;
   }
   display() {
@@ -1220,6 +1263,8 @@ var AlembicSettingTab = class extends import_obsidian4.PluginSettingTab {
         cls: "alembic-tab-btn" + (this.activeTab === tab ? " alembic-tab-active" : "")
       });
       btn.addEventListener("click", () => {
+        if (!this.confirmIfDirty())
+          return;
         this.activeTab = tab;
         this.display();
       });
@@ -1291,6 +1336,24 @@ var AlembicSettingTab = class extends import_obsidian4.PluginSettingTab {
     await this.plugin.reloadWorkflows();
     this.display();
   }
+  /** Marks the detail panel as dirty when any input/change event fires. */
+  trackDirty(container) {
+    const mark = () => {
+      this.dirty = true;
+    };
+    container.addEventListener("input", mark);
+    container.addEventListener("change", mark);
+  }
+  /** Returns true if safe to proceed (not dirty, or user confirmed discard). */
+  confirmIfDirty() {
+    if (!this.dirty)
+      return true;
+    if (confirm("You have unsaved changes. Discard them?")) {
+      this.dirty = false;
+      return true;
+    }
+    return false;
+  }
   // ── Shared field helpers ──────────────────────────────────────────────────
   createField(parent, label, description) {
     const group = parent.createDiv("alembic-field");
@@ -1310,6 +1373,19 @@ var AlembicSettingTab = class extends import_obsidian4.PluginSettingTab {
       onChange(cb.checked);
       span.textContent = cb.checked ? "On" : "Off";
     });
+  }
+  addTokenButtons(parent, textarea, onUpdate) {
+    const row = parent.createDiv("alembic-token-row");
+    for (const token of [TOKEN_SELECTION, TOKEN_CONTEXT]) {
+      const btn = row.createEl("button", { text: `+ ${token}`, cls: "alembic-token-btn" });
+      btn.addEventListener("click", () => {
+        const pos = textarea.selectionStart;
+        textarea.value = textarea.value.slice(0, pos) + token + textarea.value.slice(pos);
+        onUpdate(textarea.value);
+        textarea.focus();
+        textarea.selectionStart = textarea.selectionEnd = pos + token.length;
+      });
+    }
   }
   // ── Workflows tab ─────────────────────────────────────────────────────────
   renderWorkflowSidebar(sidebar) {
@@ -1331,7 +1407,7 @@ var AlembicSettingTab = class extends import_obsidian4.PluginSettingTab {
         replaceSelection: false,
         humanize: false,
         providerId: CLAUDE_CLI_PROVIDER_ID,
-        linkDepth: 0
+        linkDepth: 1
       };
       await writeWorkflowFile(this.app, folder, filename, newWorkflow);
       await this.plugin.reloadWorkflows();
@@ -1348,6 +1424,8 @@ var AlembicSettingTab = class extends import_obsidian4.PluginSettingTab {
         cls: "alembic-sidebar-item" + (w.id === this.activeWorkflowId ? " alembic-active" : "")
       });
       item.addEventListener("click", () => {
+        if (!this.confirmIfDirty())
+          return;
         this.activeWorkflowId = w.id;
         this.display();
       });
@@ -1408,6 +1486,7 @@ var AlembicSettingTab = class extends import_obsidian4.PluginSettingTab {
     }
     const workflow = (_a2 = workflows.find((w) => w.id === this.activeWorkflowId)) != null ? _a2 : workflows[0];
     const draft = { ...workflow };
+    this.trackDirty(detail);
     const openRow = detail.createDiv("alembic-open-row");
     const tfile = this.plugin.workflowFileMap.get(workflow.id);
     if (tfile) {
@@ -1443,6 +1522,9 @@ var AlembicSettingTab = class extends import_obsidian4.PluginSettingTab {
     sysArea.addEventListener("input", () => {
       draft.systemPrompt = sysArea.value;
     });
+    this.addTokenButtons(sysField, sysArea, (v) => {
+      draft.systemPrompt = v;
+    });
     if (workflow.id !== FREEFORM_WORKFLOW_ID) {
       const promptField = this.createField(detail, "Prompt", "Optional. Use {=SELECTION=} and {=CONTEXT=} as placeholders. If blank, sends available selection and note content automatically.");
       const promptArea = promptField.createEl("textarea", { cls: "alembic-textarea" });
@@ -1450,10 +1532,13 @@ var AlembicSettingTab = class extends import_obsidian4.PluginSettingTab {
       promptArea.addEventListener("input", () => {
         draft.prompt = promptArea.value;
       });
+      this.addTokenButtons(promptField, promptArea, (v) => {
+        draft.prompt = v;
+      });
     } else {
       this.createField(detail, "Prompt", "The prompt is entered by the user at run time via the text input popup.");
     }
-    this.createToggle(detail, "Replace selection", "Off = insert result at cursor position.", draft.replaceSelection, (v) => {
+    this.createToggle(detail, "Replace selection", "Replaces highlighted text with the result. If no text is selected, replaces the entire note for context-only workflows (e.g. Lint, Add Structure). Off = insert at cursor.", draft.replaceSelection, (v) => {
       draft.replaceSelection = v;
     });
     if (workflow.id !== HUMANIZE_WORKFLOW_ID) {
@@ -1478,6 +1563,7 @@ var AlembicSettingTab = class extends import_obsidian4.PluginSettingTab {
       var _a3, _b;
       if (!confirm(`Delete "${workflow.name}"? The file will be moved to your system trash.`))
         return;
+      this.dirty = false;
       const file = this.plugin.workflowFileMap.get(workflow.id);
       if (file) {
         await this.app.vault.trash(file, true);
@@ -1491,6 +1577,7 @@ var AlembicSettingTab = class extends import_obsidian4.PluginSettingTab {
       resetBtn.addEventListener("click", async () => {
         if (!confirm(`Reset "${workflow.name}" to its built-in default? Any edits will be overwritten.`))
           return;
+        this.dirty = false;
         const ok = await resetWorkflowToDefault(this.app, this.plugin.settings.workflowsFolder, workflow.id);
         await this.plugin.reloadWorkflows();
         this.display();
@@ -1503,9 +1590,18 @@ var AlembicSettingTab = class extends import_obsidian4.PluginSettingTab {
     }
     const saveBtn = buttonRow.createEl("button", { text: "Save", cls: "alembic-save-btn" });
     saveBtn.addEventListener("click", async () => {
+      if (!draft.name.trim()) {
+        alembicFlash("Workflow name cannot be empty.", 5e3, "error");
+        return;
+      }
+      if (!this.plugin.settings.providers.some((p) => p.id === draft.providerId)) {
+        alembicFlash("The selected provider no longer exists. Choose another.", 5e3, "error");
+        return;
+      }
       const existingFile = this.plugin.workflowFileMap.get(workflow.id);
       const filename = existingFile ? existingFile.name : safeFilename(draft.name) + ".md";
       await writeWorkflowFile(this.app, this.plugin.settings.workflowsFolder, filename, draft);
+      this.dirty = false;
       await this.plugin.reloadWorkflows();
       this.activeWorkflowId = draft.id;
       this.display();
@@ -1536,6 +1632,8 @@ var AlembicSettingTab = class extends import_obsidian4.PluginSettingTab {
         cls: "alembic-sidebar-item" + (p.id === this.activeProviderId ? " alembic-active" : "")
       });
       item.addEventListener("click", () => {
+        if (!this.confirmIfDirty())
+          return;
         this.activeProviderId = p.id;
         this.display();
       });
@@ -1554,6 +1652,7 @@ var AlembicSettingTab = class extends import_obsidian4.PluginSettingTab {
     const provider = (_a2 = providers.find((p) => p.id === this.activeProviderId)) != null ? _a2 : providers[0];
     const draft = { ...provider };
     const isBuiltIn = provider.id === CLAUDE_CLI_PROVIDER_ID;
+    this.trackDirty(detail);
     const nameField = this.createField(detail, "Profile Name");
     const nameInput = nameField.createEl("input", { type: "text", cls: "alembic-input" });
     nameInput.value = draft.name;
@@ -1659,19 +1758,43 @@ var AlembicSettingTab = class extends import_obsidian4.PluginSettingTab {
       const deleteBtn = buttonRow.createEl("button", { text: "Delete", cls: "alembic-delete-btn" });
       deleteBtn.addEventListener("click", async () => {
         var _a3, _b;
-        if (!confirm(`Delete "${provider.name}"? Workflows using it will fall back to the first available provider.`))
+        const affected = this.plugin.workflows.filter((w) => w.providerId === provider.id);
+        const fallback = this.plugin.settings.providers.find((p) => p.id !== provider.id);
+        let msg = `Delete "${provider.name}"?`;
+        if (affected.length > 0) {
+          const names = affected.map((w) => w.name).join(", ");
+          msg += fallback ? `
+
+${affected.length} workflow(s) use this provider (${names}) and will be reassigned to "${fallback.name}".` : `
+
+${affected.length} workflow(s) use this provider (${names}). No other provider exists \u2014 they will have no provider until you add one.`;
+        }
+        if (!confirm(msg))
           return;
+        if (affected.length > 0 && fallback) {
+          await Promise.all(affected.map((wf) => {
+            wf.providerId = fallback.id;
+            const file = this.plugin.workflowFileMap.get(wf.id);
+            return file ? writeWorkflowFile(this.app, this.plugin.settings.workflowsFolder, file.name, wf) : Promise.resolve();
+          }));
+        }
         this.plugin.settings.providers = this.plugin.settings.providers.filter((p) => p.id !== provider.id);
         this.activeProviderId = (_b = (_a3 = this.plugin.settings.providers[0]) == null ? void 0 : _a3.id) != null ? _b : null;
         await this.plugin.saveSettings();
+        await this.plugin.reloadWorkflows();
         this.display();
       });
     }
     const saveBtn = buttonRow.createEl("button", { text: "Save", cls: "alembic-save-btn" });
     saveBtn.addEventListener("click", async () => {
+      if (!draft.name.trim()) {
+        alembicFlash("Provider name cannot be empty.", 5e3, "error");
+        return;
+      }
       const idx = this.plugin.settings.providers.findIndex((p) => p.id === provider.id);
       if (idx !== -1) {
         this.plugin.settings.providers[idx] = draft;
+        this.dirty = false;
         await this.plugin.saveSettings();
         this.display();
       }
@@ -1708,6 +1831,7 @@ var AlembicPlugin = class extends import_obsidian5.Plugin {
     super(...arguments);
     this.workflows = [];
     this.workflowFileMap = /* @__PURE__ */ new Map();
+    this.lastSkipped = "";
   }
   async onload() {
     await this.loadSettings();
@@ -1759,9 +1883,14 @@ var AlembicPlugin = class extends import_obsidian5.Plugin {
     return path.startsWith(this.settings.workflowsFolder + "/") && path.endsWith(".md");
   }
   async reloadWorkflows() {
-    const { workflows, fileMap } = await loadWorkflowsFromVault(this.app, this.settings.workflowsFolder);
+    const { workflows, fileMap, skipped } = await loadWorkflowsFromVault(this.app, this.settings.workflowsFolder);
     this.workflows = workflows;
     this.workflowFileMap = fileMap;
+    const skippedKey = skipped.join(",");
+    if (skipped.length > 0 && skippedKey !== this.lastSkipped) {
+      alembicFlash(`Skipped ${skipped.length} malformed workflow file(s): ${skipped.join(", ")}`, 8e3, "error");
+    }
+    this.lastSkipped = skippedKey;
   }
   async migrateWorkflows(legacyWorkflows) {
     for (const wf of legacyWorkflows) {
@@ -1778,11 +1907,14 @@ var AlembicPlugin = class extends import_obsidian5.Plugin {
       id: cmdId,
       name: workflow.name,
       editorCallback: (editor) => {
-        var _a2;
-        const live = (_a2 = this.workflows.find((w) => w.id === workflow.id)) != null ? _a2 : workflow;
+        const live = this.workflows.find((w) => w.id === workflow.id);
+        if (!live) {
+          alembicFlash("This workflow no longer exists. Reload the plugin to update the command palette.", 5e3, "error");
+          return;
+        }
         if (live.id === FREEFORM_WORKFLOW_ID) {
           new FreeformModal(this.app, live, (prompt, humanize) => {
-            this.executeWorkflow(editor, { ...live, prompt: `{=CONTEXT=}
+            this.executeWorkflow(editor, { ...live, prompt: `${TOKEN_CONTEXT}
 
 ---
 
@@ -1806,6 +1938,12 @@ ${prompt}`, humanize });
     if (!userMessage.trim()) {
       alembicFlash("Nothing to distill \u2014 add some text or select a passage.", 5e3);
       return;
+    }
+    const totalChars = userMessage.length + workflow.systemPrompt.length;
+    if (totalChars > 1e5) {
+      const approxKb = Math.round(totalChars / 1024);
+      if (!confirm(`The context being sent is ~${approxKb} KB (including linked notes). This may be slow or hit token limits. Continue?`))
+        return;
     }
     const profile = (_a2 = this.settings.providers.find((p) => p.id === workflow.providerId)) != null ? _a2 : this.settings.providers[0];
     if (!profile) {
@@ -1839,6 +1977,11 @@ ${prompt}`, humanize });
         alembicFlash(result.error, 8e3, "error");
         return;
       }
+      if (!result.output.trim()) {
+        finish();
+        alembicFlash("The provider returned an empty response.", 5e3, "error");
+        return;
+      }
       if (workflow.humanize) {
         run.setStatus("Humanizing\u2026");
         const humanizeWorkflow = this.workflows.find((w) => w.id === HUMANIZE_WORKFLOW_ID);
@@ -1857,7 +2000,7 @@ ${prompt}`, humanize });
         }
       }
       finish();
-      if (workflow.replaceSelection) {
+      if (workflow.replaceSelection && (hasSelection || isFullNoteWorkflow(workflow))) {
         if (hasSelection) {
           editor.replaceRange(result.output, selFrom, selTo);
         } else {

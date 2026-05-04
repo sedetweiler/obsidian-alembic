@@ -14,6 +14,8 @@ const DEFAULT_FILENAMES: Record<string, string> = {
   'default-add-structure':   'Add Structure.md',
   'default-expand':          'Expand This.md',
   'default-continue':        'Continue Writing.md',
+  'default-copywriting':     'Copywriting.md',
+  'continue-prompted':       'Contextual Prompt.md',
   'default-devils-advocate': 'Devils Advocate.md',
   'default-key-terms':       'Extract Key Terms.md',
   'default-to-table':        'Convert to Table.md',
@@ -54,7 +56,7 @@ export function markdownToWorkflow(content: string): AlembicWorkflow | null {
 
     const body = lines.slice(closeIdx + 1).join('\n').replace(/^\n/, '');
 
-    const rawDepth = fm.linkDepth != null ? Number(fm.linkDepth) : 0;
+    const rawDepth = fm.linkDepth != null ? Number(fm.linkDepth) : 1;
     return {
       id,
       name:            fm.name        != null ? String(fm.name)        : 'Unnamed',
@@ -75,12 +77,13 @@ export function markdownToWorkflow(content: string): AlembicWorkflow | null {
 export interface WorkflowLoadResult {
   workflows: AlembicWorkflow[];
   fileMap: Map<string, TFile>; // workflow.id → TFile
+  skipped: string[];           // filenames that failed to parse
 }
 
 export async function loadWorkflowsFromVault(app: App, folder: string): Promise<WorkflowLoadResult> {
   const folderNode = app.vault.getAbstractFileByPath(folder);
   if (!(folderNode instanceof TFolder)) {
-    return { workflows: [], fileMap: new Map() };
+    return { workflows: [], fileMap: new Map(), skipped: [] };
   }
 
   const files = app.vault.getFiles()
@@ -90,6 +93,7 @@ export async function loadWorkflowsFromVault(app: App, folder: string): Promise<
   const workflows: AlembicWorkflow[] = [];
   const fileMap = new Map<string, TFile>();
   const seenIds = new Set<string>();
+  const skipped: string[] = [];
 
   for (const file of files) {
     const content = await app.vault.read(file);
@@ -98,10 +102,12 @@ export async function loadWorkflowsFromVault(app: App, folder: string): Promise<
       seenIds.add(wf.id);
       workflows.push(wf);
       fileMap.set(wf.id, file);
+    } else if (!wf) {
+      skipped.push(file.name);
     }
   }
 
-  return { workflows, fileMap };
+  return { workflows, fileMap, skipped };
 }
 
 /** Write a workflow to a vault file. Creates the file if it doesn't exist, updates it if it does. */

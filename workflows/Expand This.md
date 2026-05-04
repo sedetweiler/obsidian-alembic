@@ -9,6 +9,9 @@ providerId: "default-claude-cli"
 
 You are a writer developing an idea from a seed into a full, substantive piece.
 
+Here is the full note for context reference:
+{=CONTEXT=}
+
 How to expand well:
 - Start by restating the core idea more precisely (often the original phrasing is vague)
 - Add the "why it matters" layer: what's the consequence, the implication, the stake?

@@ -1,5 +1,5 @@
 import { App, Editor, Plugin, TFile } from 'obsidian';
-import { AlembicSettings, AlembicWorkflow, CLAUDE_CLI_PROVIDER_ID, DEFAULT_PROVIDERS, DEFAULT_SETTINGS, DEFAULT_WORKFLOWS_FOLDER, FREEFORM_WORKFLOW_ID, HUMANIZE_WORKFLOW_ID } from './types';
+import { AlembicSettings, AlembicWorkflow, DEFAULT_PROVIDERS, DEFAULT_SETTINGS, DEFAULT_WORKFLOWS_FOLDER, FREEFORM_WORKFLOW_ID, HUMANIZE_WORKFLOW_ID, TOKEN_CONTEXT, isFullNoteWorkflow } from './types';
 import { WorkflowSelectorModal, FreeformModal } from './modal';
 import { AlembicSettingTab } from './settings';
 import { assembleUserMessage, runWithProvider, substituteTokens } from './runner';
@@ -40,6 +40,7 @@ export default class AlembicPlugin extends Plugin {
   settings!: AlembicSettings;
   workflows: AlembicWorkflow[] = [];
   workflowFileMap: Map<string, TFile> = new Map();
+  private lastSkipped = '';
 
   async onload(): Promise<void> {
     await this.loadSettings();
@@ -106,9 +107,14 @@ export default class AlembicPlugin extends Plugin {
   }
 
   async reloadWorkflows(): Promise<void> {
-    const { workflows, fileMap } = await loadWorkflowsFromVault(this.app, this.settings.workflowsFolder);
+    const { workflows, fileMap, skipped } = await loadWorkflowsFromVault(this.app, this.settings.workflowsFolder);
     this.workflows = workflows;
     this.workflowFileMap = fileMap;
+    const skippedKey = skipped.join(',');
+    if (skipped.length > 0 && skippedKey !== this.lastSkipped) {
+      alembicFlash(`Skipped ${skipped.length} malformed workflow file(s): ${skipped.join(', ')}`, 8000, 'error');
+    }
+    this.lastSkipped = skippedKey;
   }
 
   private async migrateWorkflows(legacyWorkflows: AlembicWorkflow[]): Promise<void> {
@@ -129,11 +135,13 @@ export default class AlembicPlugin extends Plugin {
       id: cmdId,
       name: workflow.name,
       editorCallback: (editor: Editor) => {
-        // Look up the live workflow data so edits to the .md file take effect immediately
-        const live = this.workflows.find(w => w.id === workflow.id) ?? workflow;
+        // Look up the live workflow data so edits to the .md file take effect immediately.
+        // If the workflow was deleted, the command stays in the palette until plugin reload — bail gracefully.
+        const live = this.workflows.find(w => w.id === workflow.id);
+        if (!live) { alembicFlash('This workflow no longer exists. Reload the plugin to update the command palette.', 5000, 'error'); return; }
         if (live.id === FREEFORM_WORKFLOW_ID) {
           new FreeformModal(this.app, live, (prompt, humanize) => {
-            this.executeWorkflow(editor, { ...live, prompt: `{=CONTEXT=}\n\n---\n\n${prompt}`, humanize });
+            this.executeWorkflow(editor, { ...live, prompt: `${TOKEN_CONTEXT}\n\n---\n\n${prompt}`, humanize });
           }).open();
         } else {
           this.executeWorkflow(editor, live);
@@ -161,6 +169,14 @@ export default class AlembicPlugin extends Plugin {
     if (!userMessage.trim()) {
       alembicFlash('Nothing to distill — add some text or select a passage.', 5000);
       return;
+    }
+
+    // Rough size check — warn if the combined context is very large.
+    // ~4 chars per token is a conservative estimate; 100k chars ≈ 25k tokens.
+    const totalChars = userMessage.length + workflow.systemPrompt.length;
+    if (totalChars > 100_000) {
+      const approxKb = Math.round(totalChars / 1024);
+      if (!confirm(`The context being sent is ~${approxKb} KB (including linked notes). This may be slow or hit token limits. Continue?`)) return;
     }
 
     const profile = this.settings.providers.find(p => p.id === workflow.providerId)
@@ -191,6 +207,7 @@ export default class AlembicPlugin extends Plugin {
 
       if (result.cancelled) { finish(); alembicFlash('Stopped.', 3000); return; }
       if (result.error)     { finish(); alembicFlash(result.error, 8000, 'error'); return; }
+      if (!result.output.trim()) { finish(); alembicFlash('The provider returned an empty response.', 5000, 'error'); return; }
 
       if (workflow.humanize) {
         run.setStatus('Humanizing…');
@@ -206,14 +223,11 @@ export default class AlembicPlugin extends Plugin {
       }
 
       finish();
-      if (workflow.replaceSelection) {
+      if (workflow.replaceSelection && (hasSelection || isFullNoteWorkflow(workflow))) {
         if (hasSelection) {
-          // Replace the text that was selected at call time.
-          // replaceRange uses saved coordinates, not live editor state.
           editor.replaceRange(result.output, selFrom, selTo);
         } else {
-          // No selection — this is a full-note workflow (e.g. Lint, Add Structure).
-          // Replace from line 0 to the last character of the last line.
+          // Full-note workflow (e.g. Lint, Add Structure) — replace entire document.
           const lastLine = editor.lastLine();
           editor.replaceRange(
             result.output,
@@ -222,8 +236,6 @@ export default class AlembicPlugin extends Plugin {
           );
         }
       } else {
-        // Use the saved cursor position — live getCursor('to') would reflect
-        // wherever the user clicked during the async wait.
         editor.replaceRange(result.output, selTo);
       }
       alembicFlash(`${workflow.name} — done.`, 2500, 'success');

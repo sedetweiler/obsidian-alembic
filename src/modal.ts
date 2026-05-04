@@ -1,5 +1,5 @@
 import { App, FuzzyMatch, FuzzySuggestModal, Modal, renderMatches } from 'obsidian';
-import { AlembicWorkflow, FREEFORM_WORKFLOW_ID } from './types';
+import { AlembicWorkflow, FREEFORM_WORKFLOW_ID, TOKEN_CONTEXT } from './types';
 
 interface Hotkey {
   modifiers?: string[];
@@ -74,7 +74,7 @@ export class WorkflowSelectorModal extends FuzzySuggestModal<AlembicWorkflow> {
     if (item.id === FREEFORM_WORKFLOW_ID) {
       new FreeformModal(this.app, item, (prompt, humanize) => {
         // Prepend note context so Claude always sees the current document
-        this.onSelect({ ...item, prompt: `{=CONTEXT=}\n\n---\n\n${prompt}`, humanize });
+        this.onSelect({ ...item, prompt: `${TOKEN_CONTEXT}\n\n---\n\n${prompt}`, humanize });
       }).open();
     } else {
       this.onSelect(item);

@@ -1,6 +1,6 @@
-import { App, PluginSettingTab, TFile, TFolder } from 'obsidian';
+import { App, PluginSettingTab, TFolder } from 'obsidian';
 import { alembicFlash } from './notice';
-import { AlembicWorkflow, ProviderProfile, ProviderType, CLAUDE_CLI_PROVIDER_ID, FREEFORM_WORKFLOW_ID, HUMANIZE_WORKFLOW_ID, DEFAULT_WORKFLOWS_FOLDER, WORKFLOWS_REPO_API_URL } from './types';
+import { AlembicWorkflow, ProviderProfile, ProviderType, CLAUDE_CLI_PROVIDER_ID, FREEFORM_WORKFLOW_ID, HUMANIZE_WORKFLOW_ID, WORKFLOWS_REPO_API_URL, TOKEN_SELECTION, TOKEN_CONTEXT } from './types';
 import { PROVIDER_META, PROVIDER_META_MAP } from './providers';
 import { fetchProviderModels } from './runner';
 import { writeWorkflowFile, writeDefaultWorkflows, ensureWorkflowsFolder, safeFilename, isDefaultWorkflow, resetWorkflowToDefault, pullNewWorkflowsFromRepo } from './workflow-loader';
@@ -13,6 +13,7 @@ export class AlembicSettingTab extends PluginSettingTab {
   private activeTab: Tab = 'workflows';
   private activeWorkflowId: string | null = null;
   private activeProviderId: string | null = null;
+  private dirty = false;
 
   constructor(app: App, plugin: AlembicPlugin) {
     super(app, plugin);
@@ -32,6 +33,7 @@ export class AlembicSettingTab extends PluginSettingTab {
         cls: 'alembic-tab-btn' + (this.activeTab === tab ? ' alembic-tab-active' : ''),
       });
       btn.addEventListener('click', () => {
+        if (!this.confirmIfDirty()) return;
         this.activeTab = tab;
         this.display();
       });
@@ -113,6 +115,23 @@ export class AlembicSettingTab extends PluginSettingTab {
     this.display();
   }
 
+  /** Marks the detail panel as dirty when any input/change event fires. */
+  private trackDirty(container: HTMLElement): void {
+    const mark = () => { this.dirty = true; };
+    container.addEventListener('input', mark);
+    container.addEventListener('change', mark);
+  }
+
+  /** Returns true if safe to proceed (not dirty, or user confirmed discard). */
+  private confirmIfDirty(): boolean {
+    if (!this.dirty) return true;
+    if (confirm('You have unsaved changes. Discard them?')) {
+      this.dirty = false;
+      return true;
+    }
+    return false;
+  }
+
   // ── Shared field helpers ──────────────────────────────────────────────────
 
   private createField(parent: HTMLElement, label: string, description?: string): HTMLDivElement {
@@ -141,6 +160,24 @@ export class AlembicSettingTab extends PluginSettingTab {
     });
   }
 
+  private addTokenButtons(
+    parent: HTMLElement,
+    textarea: HTMLTextAreaElement,
+    onUpdate: (v: string) => void,
+  ): void {
+    const row = parent.createDiv('alembic-token-row');
+    for (const token of [TOKEN_SELECTION, TOKEN_CONTEXT]) {
+      const btn = row.createEl('button', { text: `+ ${token}`, cls: 'alembic-token-btn' });
+      btn.addEventListener('click', () => {
+        const pos = textarea.selectionStart;
+        textarea.value = textarea.value.slice(0, pos) + token + textarea.value.slice(pos);
+        onUpdate(textarea.value);
+        textarea.focus();
+        textarea.selectionStart = textarea.selectionEnd = pos + token.length;
+      });
+    }
+  }
+
   // ── Workflows tab ─────────────────────────────────────────────────────────
 
   private renderWorkflowSidebar(sidebar: HTMLElement): void {
@@ -164,7 +201,7 @@ export class AlembicSettingTab extends PluginSettingTab {
         replaceSelection: false,
         humanize: false,
         providerId: CLAUDE_CLI_PROVIDER_ID,
-        linkDepth: 0,
+        linkDepth: 1,
       };
       await writeWorkflowFile(this.app, folder, filename, newWorkflow);
       await this.plugin.reloadWorkflows();
@@ -182,7 +219,7 @@ export class AlembicSettingTab extends PluginSettingTab {
         text: w.name,
         cls: 'alembic-sidebar-item' + (w.id === this.activeWorkflowId ? ' alembic-active' : ''),
       });
-      item.addEventListener('click', () => { this.activeWorkflowId = w.id; this.display(); });
+      item.addEventListener('click', () => { if (!this.confirmIfDirty()) return; this.activeWorkflowId = w.id; this.display(); });
     });
 
     const restoreBtn = sidebar.createEl('button', { text: 'Restore defaults', cls: 'alembic-restore-btn' });
@@ -242,6 +279,7 @@ export class AlembicSettingTab extends PluginSettingTab {
 
     const workflow = workflows.find(w => w.id === this.activeWorkflowId) ?? workflows[0];
     const draft: AlembicWorkflow = { ...workflow };
+    this.trackDirty(detail);
 
     // ── Open in editor button ──
     const openRow = detail.createDiv('alembic-open-row');
@@ -278,6 +316,7 @@ export class AlembicSettingTab extends PluginSettingTab {
     sysArea.placeholder = 'You are a helpful assistant.';
     sysArea.value = draft.systemPrompt;
     sysArea.addEventListener('input', () => { draft.systemPrompt = sysArea.value; });
+    this.addTokenButtons(sysField, sysArea, v => { draft.systemPrompt = v; });
 
     // Prompt — hidden for freeform workflow since it's entered at run time
     if (workflow.id !== FREEFORM_WORKFLOW_ID) {
@@ -285,12 +324,13 @@ export class AlembicSettingTab extends PluginSettingTab {
       const promptArea = promptField.createEl('textarea', { cls: 'alembic-textarea' });
       promptArea.value = draft.prompt;
       promptArea.addEventListener('input', () => { draft.prompt = promptArea.value; });
+      this.addTokenButtons(promptField, promptArea, v => { draft.prompt = v; });
     } else {
       this.createField(detail, 'Prompt', 'The prompt is entered by the user at run time via the text input popup.');
     }
 
     // Replace selection
-    this.createToggle(detail, 'Replace selection', 'Off = insert result at cursor position.', draft.replaceSelection, v => { draft.replaceSelection = v; });
+    this.createToggle(detail, 'Replace selection', 'Replaces highlighted text with the result. If no text is selected, replaces the entire note for context-only workflows (e.g. Lint, Add Structure). Off = insert at cursor.', draft.replaceSelection, v => { draft.replaceSelection = v; });
 
     // Humanize
     if (workflow.id !== HUMANIZE_WORKFLOW_ID) {
@@ -312,6 +352,7 @@ export class AlembicSettingTab extends PluginSettingTab {
     const deleteBtn = buttonRow.createEl('button', { text: 'Delete', cls: 'alembic-delete-btn' });
     deleteBtn.addEventListener('click', async () => {
       if (!confirm(`Delete "${workflow.name}"? The file will be moved to your system trash.`)) return;
+      this.dirty = false;
       const file = this.plugin.workflowFileMap.get(workflow.id);
       if (file) {
         await this.app.vault.trash(file, true);
@@ -325,6 +366,7 @@ export class AlembicSettingTab extends PluginSettingTab {
       const resetBtn = buttonRow.createEl('button', { text: 'Reset to default', cls: 'alembic-reset-btn' });
       resetBtn.addEventListener('click', async () => {
         if (!confirm(`Reset "${workflow.name}" to its built-in default? Any edits will be overwritten.`)) return;
+        this.dirty = false;
         const ok = await resetWorkflowToDefault(this.app, this.plugin.settings.workflowsFolder, workflow.id);
         await this.plugin.reloadWorkflows();
         this.display();
@@ -338,9 +380,15 @@ export class AlembicSettingTab extends PluginSettingTab {
 
     const saveBtn = buttonRow.createEl('button', { text: 'Save', cls: 'alembic-save-btn' });
     saveBtn.addEventListener('click', async () => {
+      if (!draft.name.trim()) { alembicFlash('Workflow name cannot be empty.', 5000, 'error'); return; }
+      if (!this.plugin.settings.providers.some(p => p.id === draft.providerId)) {
+        alembicFlash('The selected provider no longer exists. Choose another.', 5000, 'error');
+        return;
+      }
       const existingFile = this.plugin.workflowFileMap.get(workflow.id);
       const filename = existingFile ? existingFile.name : safeFilename(draft.name) + '.md';
       await writeWorkflowFile(this.app, this.plugin.settings.workflowsFolder, filename, draft);
+      this.dirty = false;
       await this.plugin.reloadWorkflows();
       this.activeWorkflowId = draft.id;
       this.display();
@@ -374,7 +422,7 @@ export class AlembicSettingTab extends PluginSettingTab {
         text: p.name,
         cls: 'alembic-sidebar-item' + (p.id === this.activeProviderId ? ' alembic-active' : ''),
       });
-      item.addEventListener('click', () => { this.activeProviderId = p.id; this.display(); });
+      item.addEventListener('click', () => { if (!this.confirmIfDirty()) return; this.activeProviderId = p.id; this.display(); });
     });
 
     if (!this.activeProviderId && this.plugin.settings.providers.length > 0) {
@@ -392,6 +440,7 @@ export class AlembicSettingTab extends PluginSettingTab {
     const provider = providers.find(p => p.id === this.activeProviderId) ?? providers[0];
     const draft: ProviderProfile = { ...provider };
     const isBuiltIn = provider.id === CLAUDE_CLI_PROVIDER_ID;
+    this.trackDirty(detail);
 
     // Name
     const nameField = this.createField(detail, 'Profile Name');
@@ -510,19 +559,38 @@ export class AlembicSettingTab extends PluginSettingTab {
     if (!isBuiltIn) {
       const deleteBtn = buttonRow.createEl('button', { text: 'Delete', cls: 'alembic-delete-btn' });
       deleteBtn.addEventListener('click', async () => {
-        if (!confirm(`Delete "${provider.name}"? Workflows using it will fall back to the first available provider.`)) return;
+        const affected = this.plugin.workflows.filter(w => w.providerId === provider.id);
+        const fallback = this.plugin.settings.providers.find(p => p.id !== provider.id);
+        let msg = `Delete "${provider.name}"?`;
+        if (affected.length > 0) {
+          const names = affected.map(w => w.name).join(', ');
+          msg += fallback
+            ? `\n\n${affected.length} workflow(s) use this provider (${names}) and will be reassigned to "${fallback.name}".`
+            : `\n\n${affected.length} workflow(s) use this provider (${names}). No other provider exists — they will have no provider until you add one.`;
+        }
+        if (!confirm(msg)) return;
+        if (affected.length > 0 && fallback) {
+          await Promise.all(affected.map(wf => {
+            wf.providerId = fallback.id;
+            const file = this.plugin.workflowFileMap.get(wf.id);
+            return file ? writeWorkflowFile(this.app, this.plugin.settings.workflowsFolder, file.name, wf) : Promise.resolve();
+          }));
+        }
         this.plugin.settings.providers = this.plugin.settings.providers.filter(p => p.id !== provider.id);
         this.activeProviderId = this.plugin.settings.providers[0]?.id ?? null;
         await this.plugin.saveSettings();
+        await this.plugin.reloadWorkflows();
         this.display();
       });
     }
 
     const saveBtn = buttonRow.createEl('button', { text: 'Save', cls: 'alembic-save-btn' });
     saveBtn.addEventListener('click', async () => {
+      if (!draft.name.trim()) { alembicFlash('Provider name cannot be empty.', 5000, 'error'); return; }
       const idx = this.plugin.settings.providers.findIndex(p => p.id === provider.id);
       if (idx !== -1) {
         this.plugin.settings.providers[idx] = draft;
+        this.dirty = false;
         await this.plugin.saveSettings();
         this.display();
       }

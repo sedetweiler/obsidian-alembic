@@ -1,7 +1,7 @@
 import { spawn } from 'child_process';
 import * as http from 'http';
 import * as https from 'https';
-import { AlembicWorkflow, ProviderProfile } from './types';
+import { AlembicWorkflow, ProviderProfile, TOKEN_SELECTION, TOKEN_CONTEXT } from './types';
 
 // GUI apps on macOS inherit a minimal PATH that excludes Homebrew and other
 // common install locations. Augment it so CLI tools like `claude` and `gemini`
@@ -16,8 +16,8 @@ const AUGMENTED_PATH = [
 
 export function substituteTokens(template: string, selection: string, context: string): string {
   return template
-    .replace(/\{=SELECTION=\}/g, selection)
-    .replace(/\{=CONTEXT=\}/g, context);
+    .split(TOKEN_SELECTION).join(selection)
+    .split(TOKEN_CONTEXT).join(context);
 }
 
 export function assembleUserMessage(
@@ -72,9 +72,11 @@ function classifyError(combined: string, rawMessage: string, code: number | null
 
 // ── Node HTTP helper ──────────────────────────────────────────────────────────
 
+const HTTP_TIMEOUT_MS = 120_000; // 2 minutes
+
 function nodeRequest(
   url: string,
-  options: { method?: string; headers?: Record<string, string>; body?: string } = {}
+  options: { method?: string; headers?: Record<string, string>; body?: string; timeoutMs?: number } = {}
 ): Promise<{ status: number; body: string }> {
   return new Promise((resolve, reject) => {
     const parsed = new URL(url);
@@ -86,6 +88,7 @@ function nodeRequest(
         path: parsed.pathname + parsed.search,
         method: options.method ?? 'GET',
         headers: { 'content-type': 'application/json', ...options.headers },
+        timeout: options.timeoutMs ?? HTTP_TIMEOUT_MS,
       },
       (res) => {
         let data = '';
@@ -93,6 +96,7 @@ function nodeRequest(
         res.on('end', () => resolve({ status: res.statusCode ?? 0, body: data }));
       }
     );
+    req.on('timeout', () => { req.destroy(); reject(new Error('Request timed out — the provider did not respond within 2 minutes.')); });
     req.on('error', reject);
     if (options.body) req.write(options.body);
     req.end();
@@ -134,6 +138,8 @@ function httpRunHandle(run: () => Promise<RunResult>): RunHandle {
  * or a classified error on non-zero exit. `notFoundMessage` is returned when the
  * binary cannot be found on PATH.
  */
+const CLI_TIMEOUT_MS = 300_000; // 5 minutes
+
 function cliRunHandle(cmd: string, args: string[], input: string, notFoundMessage: string): RunHandle {
   let settled = false;
   let proc: ReturnType<typeof spawn> | null = null;
@@ -141,7 +147,7 @@ function cliRunHandle(cmd: string, args: string[], input: string, notFoundMessag
 
   const promise = new Promise<RunResult>((resolve) => {
     externalResolve = resolve;
-    const settle = (r: RunResult) => { if (!settled) { settled = true; resolve(r); } };
+    const settle = (r: RunResult) => { if (!settled) { settled = true; clearTimeout(timer); resolve(r); } };
 
     try {
       proc = spawn(cmd, args, { stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, PATH: AUGMENTED_PATH } });
@@ -150,6 +156,11 @@ function cliRunHandle(cmd: string, args: string[], input: string, notFoundMessag
       settle({ output: '', error: e.code === 'ENOENT' ? notFoundMessage : (e.message ?? String(err)) });
       return;
     }
+
+    const timer = setTimeout(() => {
+      proc?.kill();
+      settle({ output: '', error: `${cmd} did not respond within 5 minutes — the process was stopped.` });
+    }, CLI_TIMEOUT_MS);
 
     let stdout = '';
     let stderr = '';

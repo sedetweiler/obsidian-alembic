@@ -319,6 +319,27 @@
   font-family: inherit;
 }
 
+.alembic-settings .alembic-token-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.alembic-settings .alembic-token-btn {
+  font-size: 11px;
+  padding: 2px 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-secondary);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.alembic-settings .alembic-token-btn:hover {
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
+}
+
 .alembic-settings .alembic-toggle-row {
   display: flex;
   align-items: center;

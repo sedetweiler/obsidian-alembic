@@ -1,23 +1,29 @@
 {
   "name": "obsidian-alembic",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Run Claude Code CLI workflows on your Obsidian notes",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "tsc --noEmit --skipLibCheck && node esbuild.config.mjs production",
+    "lint": "eslint src/ tests/",
     "test": "jest"
   },
   "jest": {
     "preset": "ts-jest",
     "testEnvironment": "node",
-    "testMatch": ["**/tests/**/*.test.ts"]
+    "testMatch": [
+      "**/tests/**/*.test.ts"
+    ]
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",
     "@types/node": "^18.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.59.1",
+    "@typescript-eslint/parser": "^8.59.1",
     "builtin-modules": "^3.3.0",
     "esbuild": "0.17.3",
+    "eslint": "^10.3.0",
     "jest": "^29.5.0",
     "obsidian": "latest",
     "ts-jest": "^29.1.0",
