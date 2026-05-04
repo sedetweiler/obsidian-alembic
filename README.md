@@ -84,6 +84,10 @@ Run **Alembic: Run workflow** to open the picker. The freeform entry is always p
 
 Every workflow is also registered as its own command: **Alembic: [Workflow Name]**. Assign a hotkey to any workflow in Settings → Hotkeys for one-keystroke access.
 
+### Selection required
+
+Workflows whose prompt uses `{=SELECTION=}` require you to select text before running them. If nothing is selected, a flash message reminds you instead of running with empty input.
+
 ### Freeform (Ask Claude)
 
 Selecting **Ask Claude** from the picker opens a text box where you type a one-off instruction. The current note is always included as context. Use the **Humanize output** toggle to run the result through the Humanize workflow automatically.
@@ -108,6 +112,13 @@ Selecting **Ask Claude** from the picker opens a text box where you type a one-o
 | **Convert to Table** | Converts structured text or lists into a Markdown table. |
 | **Humanize** | Strips AI writing patterns: removes cliches, overused vocabulary, em dashes, sycophantic openers, and soulless structure. Used automatically by workflows with "Humanize output" enabled. |
 | **Copywriting** | Writes conversion-focused marketing copy from a brief: headlines, subheadline, body, and CTA. Emphasises benefits over features and customer language over jargon. |
+| **Brainstorm** | Generates 8–12 diverse ideas from a seed topic or question, grouped loosely with "what if" reframes at the end. |
+| **Simplify** | Rewrites complex text so anyone can understand it on first read. Replaces jargon, shortens sentences, adds inline definitions. |
+| **Generate Questions** | Creates recall, understanding, and application questions from a note — useful for study or self-testing. |
+| **Make Outline** | Distills prose into a hierarchical Markdown outline that captures every key point. |
+| **Translate** | Translates selected text into English (auto-detects source language). Preserves formatting and tone. |
+| **Translate to Spanish** | Translates selected text into Spanish. Same rules as above. |
+| **Contextual Prompt** | Select an instruction inside your note and run it against the rest of the note as context. Useful for inline "do this" commands. |
 
 ---
 
@@ -126,6 +137,7 @@ id: "default-tighten"
 prompt: "{=SELECTION=}"
 replaceSelection: true
 humanize: true
+linkDepth: 1
 providerId: "default-claude-cli"
 ---
 
@@ -141,6 +153,7 @@ You are a ruthless copy editor. Your goal is maximum signal per word...
 | `prompt` | string | The user message sent to the AI. Use tokens (see below). |
 | `replaceSelection` | boolean | `true` replaces selected text; `false` inserts at cursor |
 | `humanize` | boolean | Runs a second Humanize pass on the output if `true` |
+| `linkDepth` | number (0–3) | How many levels of `[[wikilinks]]` to follow and include as context. Default: `1`. Set to `0` to disable. |
 | `providerId` | string | ID of the provider profile to use |
 
 **The file body** is the system prompt. Leave it blank for a basic assistant with no special instructions.
@@ -157,6 +170,18 @@ Use these placeholders in the `prompt` field to inject live note content at run 
 | `{=CONTEXT=}` | The full content of the current note |
 
 If you leave `prompt` blank, Alembic sends whatever is available: selected text first, then the full note.
+
+---
+
+## Link expansion (linkDepth)
+
+When `linkDepth` is set to 1 or higher, Alembic follows `[[wikilinks]]` in your note and includes the content of the linked notes as additional context sent to the AI. This gives the model a richer picture of related material without you having to copy-paste.
+
+- **0** — No expansion. Only the current note is sent.
+- **1** (default) — Includes notes linked directly from the current note.
+- **2–3** — Follows links recursively (links in linked notes, etc.). Useful for deeply interlinked knowledge bases but can produce large payloads.
+
+If the combined context exceeds ~100 KB, Alembic will show a confirmation prompt before sending.
 
 ---
 
