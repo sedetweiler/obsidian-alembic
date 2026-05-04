@@ -1163,7 +1163,7 @@ Target: 20\u201340% fewer words with identical meaning. If you can't hit that, c
 Output only the tightened text. No explanation.
 `,
   "Translate to Spanish.md": `---
-name: "Translate to Spanish"
+name: "\u{1F310} Translate to Spanish"
 id: "default-translate-spanish"
 prompt: "{=SELECTION=}"
 replaceSelection: true
@@ -1184,7 +1184,7 @@ Rules:
 Output only the translated text. No commentary, no "Here is the translation:", no language labels.
 `,
   "Translate.md": `---
-name: "Translate to English"
+name: "\u{1F310} Translate to English"
 id: "default-translate"
 prompt: "{=SELECTION=}"
 replaceSelection: true
