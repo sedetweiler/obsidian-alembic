@@ -1,5 +1,5 @@
 import { App, Editor, Plugin, TFile } from 'obsidian';
-import { AlembicSettings, AlembicWorkflow, DEFAULT_PROVIDERS, DEFAULT_SETTINGS, DEFAULT_WORKFLOWS_FOLDER, FREEFORM_WORKFLOW_ID, HUMANIZE_WORKFLOW_ID, TOKEN_CONTEXT, isFullNoteWorkflow } from './types';
+import { AlembicSettings, AlembicWorkflow, DEFAULT_PROVIDERS, DEFAULT_SETTINGS, DEFAULT_WORKFLOWS_FOLDER, FREEFORM_WORKFLOW_ID, HUMANIZE_WORKFLOW_ID, TOKEN_CONTEXT, TOKEN_SELECTION, isFullNoteWorkflow } from './types';
 import { WorkflowSelectorModal, FreeformModal } from './modal';
 import { AlembicSettingTab } from './settings';
 import { assembleUserMessage, runWithProvider, substituteTokens } from './runner';
@@ -163,6 +163,11 @@ export default class AlembicPlugin extends Plugin {
     const selFrom = editor.getCursor('from');
     const selTo   = editor.getCursor('to');
     const hasSelection = selection.trim().length > 0;
+
+    if (!hasSelection && workflow.prompt.includes(TOKEN_SELECTION)) {
+      alembicFlash('Select some text first — this workflow operates on a selection.', 5000);
+      return;
+    }
 
     const userMessage = assembleUserMessage(workflow, selection, context);
 

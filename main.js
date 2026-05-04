@@ -1947,6 +1947,10 @@ ${prompt}`, humanize });
     const selFrom = editor.getCursor("from");
     const selTo = editor.getCursor("to");
     const hasSelection = selection.trim().length > 0;
+    if (!hasSelection && workflow.prompt.includes(TOKEN_SELECTION)) {
+      alembicFlash("Select some text first \u2014 this workflow operates on a selection.", 5e3);
+      return;
+    }
     const userMessage = assembleUserMessage(workflow, selection, context);
     if (!userMessage.trim()) {
       alembicFlash("Nothing to distill \u2014 add some text or select a passage.", 5e3);
