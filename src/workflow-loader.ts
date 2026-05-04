@@ -18,8 +18,14 @@ const DEFAULT_FILENAMES: Record<string, string> = {
   'continue-prompted':       'Contextual Prompt.md',
   'default-devils-advocate': 'Devils Advocate.md',
   'default-key-terms':       'Extract Key Terms.md',
-  'default-to-table':        'Convert to Table.md',
-  '__humanize__':            'Humanize.md',
+  'default-to-table':           'Convert to Table.md',
+  'default-translate':         'Translate.md',
+  'default-translate-spanish': 'Translate to Spanish.md',
+  'default-simplify':          'Simplify.md',
+  'default-brainstorm':        'Brainstorm.md',
+  'default-questions':         'Generate Questions.md',
+  'default-outline':           'Make Outline.md',
+  '__humanize__':              'Humanize.md',
 };
 
 // ── Serialization ─────────────────────────────────────────────────────────────

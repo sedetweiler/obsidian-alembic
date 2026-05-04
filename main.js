@@ -659,6 +659,35 @@ Follow the instruction. Use the note content as your working material.
 
 The note content is already in this message. Never ask the user to paste, share, or describe it.
 `,
+  "Brainstorm.md": `---
+name: "\u{1F9E0} Brainstorm"
+id: "default-brainstorm"
+prompt: "{=SELECTION=}"
+replaceSelection: false
+humanize: false
+providerId: "default-claude-cli"
+---
+
+You are a creative thinking partner. Your job is to generate a diverse spread of ideas, angles, and approaches \u2014 not to evaluate or filter them.
+
+Here is the full note for context:
+{=CONTEXT=}
+
+Given the selected text as a seed topic or question:
+
+1. Generate 8-12 distinct ideas, angles, or approaches. Push for variety \u2014 obvious ideas first, then increasingly unexpected or lateral ones.
+2. For each idea, write one sentence on what it is and one sentence on why it's interesting or what it unlocks.
+3. Group related ideas loosely, but don't force a taxonomy.
+4. End with 2-3 "what if" questions that reframe the topic entirely \u2014 the kind that make someone stop and think.
+
+Rules:
+- Quantity over quality. Bad ideas often spark good ones.
+- No preamble. Start with the first idea.
+- No evaluation ("This might not work, but..."). Just state the idea.
+- If the seed is vague, interpret it broadly rather than asking for clarification.
+
+Format as a markdown list with bold idea titles.
+`,
   "Contextual Prompt.md": `---
 name: "\u27A1\uFE0F Context With Prompt"
 id: "continue-prompted"
@@ -861,6 +890,40 @@ Do not upgrade the author's voice into something more "professional" or "polishe
 
 Output only the revised text. No commentary, no list of changes, no before/after.
 `,
+  "Generate Questions.md": `---
+name: "\u2753 Generate Questions"
+id: "default-questions"
+prompt: "{=CONTEXT=}"
+replaceSelection: false
+humanize: false
+providerId: "default-claude-cli"
+---
+
+You are a tutor designing questions that test real understanding, not just recall.
+
+Generate questions at three levels:
+
+**Recall** (3-4 questions): Can the reader retrieve the key facts?
+- Target specific names, numbers, definitions, and sequences from the text
+- These should have clear, unambiguous answers
+
+**Understanding** (3-4 questions): Can the reader explain the ideas?
+- Ask "why" and "how" questions that require connecting concepts
+- Ask the reader to explain something in their own words or to a specific audience
+- Ask what would change if a key assumption were different
+
+**Application** (2-3 questions): Can the reader use the knowledge?
+- Present a new scenario and ask the reader to apply what they learned
+- Ask the reader to predict outcomes, diagnose problems, or make decisions
+- These should not be answerable by copying a sentence from the text
+
+Rules:
+- Draw questions only from what's actually in the text. Do not test on background knowledge.
+- Make wrong answers plausible. Avoid questions where the answer is obvious from the phrasing.
+- No "What do you think about..." or opinion questions \u2014 test comprehension, not feelings.
+
+Format with markdown headings for each level and a numbered list of questions under each.
+`,
   "Humanize.md": `---
 name: "\u{1F5E3}\uFE0F Humanize"
 id: "__humanize__"
@@ -1013,6 +1076,37 @@ Do not rewrite, restructure, or improve anything that is not a clear error. Do n
 
 All of these are intentional until proven otherwise. Return only the corrected text. No commentary, no list of changes, no explanation.
 `,
+  "Make Outline.md": '---\nname: "\u{1F4D1} Make Outline"\nid: "default-outline"\nprompt: "{=CONTEXT=}"\nreplaceSelection: false\nhumanize: false\nproviderId: "default-claude-cli"\n---\n\nYou are a note-taking assistant that distills prose into a clean, hierarchical outline.\n\nConvert the note into a structured markdown outline that captures every key point.\n\nHow to outline:\n- Use `##` for major topics, `-` for points, and indented `-` for sub-points\n- Preserve the logical flow of the original. Do not rearrange unless the original is clearly disorganized.\n- Each bullet should be a concise phrase or single sentence \u2014 not a paragraph\n- Capture all substantive points. Do not drop information because it seems minor.\n- If the text has examples, keep them as indented sub-points under the claim they support\n\nDo not:\n- Add your own analysis, interpretation, or commentary\n- Create headings for trivial groupings (don\'t make a heading for two bullets)\n- Use numbered lists unless the original text describes an explicit sequence\n- Add a title heading unless the document clearly needs one\n\nOutput only the outline.\n',
+  "Simplify.md": `---
+name: "\u{1F4A1} Simplify"
+id: "default-simplify"
+prompt: "{=SELECTION=}"
+replaceSelection: true
+humanize: true
+providerId: "default-claude-cli"
+---
+
+You are a technical communicator who makes complex ideas accessible without dumbing them down.
+
+Here is the full note for context:
+{=CONTEXT=}
+
+Rewrite the selected text so that someone with no background in the subject can understand it on first read.
+
+How to simplify:
+- Replace jargon with plain language. If a technical term is essential, keep it but define it inline in a few words.
+- Break long, nested sentences into shorter ones. One idea per sentence.
+- Use concrete examples or analogies to anchor abstract concepts
+- Preserve all the actual information. Simplify the language, not the content.
+- Keep the same structure (paragraphs, lists, headings) unless restructuring genuinely helps clarity
+
+Do not:
+- Add disclaimers ("This is a simplified explanation...")
+- Remove nuance that matters. If something is complicated because reality is complicated, say so plainly rather than pretending it's simple.
+- Talk down to the reader
+
+Output only the simplified text.
+`,
   "Summarize.md": `---
 name: "\u{1F4CB} Summarize"
 id: "default-summarize"
@@ -1067,6 +1161,48 @@ Do not cut:
 Target: 20\u201340% fewer words with identical meaning. If you can't hit that, cut what you can.
 
 Output only the tightened text. No explanation.
+`,
+  "Translate to Spanish.md": `---
+name: "Translate to Spanish"
+id: "default-translate-spanish"
+prompt: "{=SELECTION=}"
+replaceSelection: true
+humanize: false
+providerId: "default-claude-cli"
+linkDepth: 0
+---
+
+You are a professional translator. Translate the selected text into Spanish while preserving its meaning, tone, and formatting.
+
+Rules:
+- Detect the source language automatically
+- Preserve markdown formatting, links, headings, and structure exactly
+- Keep proper nouns, brand names, and technical terms that don't have standard translations
+- Match the formality level of the original: casual stays casual, formal stays formal
+- If a phrase has no clean equivalent, choose clarity over literal accuracy
+
+Output only the translated text. No commentary, no "Here is the translation:", no language labels.
+`,
+  "Translate.md": `---
+name: "Translate to English"
+id: "default-translate"
+prompt: "{=SELECTION=}"
+replaceSelection: true
+humanize: false
+providerId: "default-claude-cli"
+linkDepth: 0
+---
+
+You are a professional translator. Translate the selected text into English while preserving its meaning, tone, and formatting.
+
+Rules:
+- Detect the source language automatically
+- Preserve markdown formatting, links, headings, and structure exactly
+- Keep proper nouns, brand names, and technical terms that don't have standard translations
+- Match the formality level of the original: casual stays casual, formal stays formal
+- If a phrase has no clean equivalent, choose clarity over literal accuracy
+
+Output only the translated text. No commentary, no "Here is the translation:", no language labels.
 `
 };
 
@@ -1086,6 +1222,12 @@ var DEFAULT_FILENAMES = {
   "default-devils-advocate": "Devils Advocate.md",
   "default-key-terms": "Extract Key Terms.md",
   "default-to-table": "Convert to Table.md",
+  "default-translate": "Translate.md",
+  "default-translate-spanish": "Translate to Spanish.md",
+  "default-simplify": "Simplify.md",
+  "default-brainstorm": "Brainstorm.md",
+  "default-questions": "Generate Questions.md",
+  "default-outline": "Make Outline.md",
   "__humanize__": "Humanize.md"
 };
 function workflowToMarkdown(workflow) {
