@@ -1,5 +1,5 @@
 ---
-name: "Translate to Spanish"
+name: "🌐 Translate to Spanish"
 id: "default-translate-spanish"
 prompt: "{=SELECTION=}"
 replaceSelection: true
