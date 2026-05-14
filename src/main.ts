@@ -1,5 +1,5 @@
 import { App, Editor, Plugin, TFile } from 'obsidian';
-import { AlembicSettings, AlembicWorkflow, DEFAULT_PROVIDERS, DEFAULT_SETTINGS, DEFAULT_WORKFLOWS_FOLDER, FREEFORM_WORKFLOW_ID, HUMANIZE_WORKFLOW_ID, TOKEN_CONTEXT, TOKEN_SELECTION, isFullNoteWorkflow } from './types';
+import { AlembicSettings, AlembicWorkflow, DEFAULT_PROVIDERS, DEFAULT_SETTINGS, DEFAULT_WORKFLOWS_FOLDER, FREEFORM_WORKFLOW_ID, HUMANIZE_WORKFLOW_ID, LegacySettings, TOKEN_CONTEXT, TOKEN_SELECTION, isFullNoteWorkflow } from './types';
 import { WorkflowSelectorModal, FreeformModal, confirmModal } from './modal';
 import { AlembicSettingTab } from './settings';
 import { assembleUserMessage, runWithProvider, substituteTokens } from './runner';
@@ -50,14 +50,13 @@ export default class AlembicPlugin extends Plugin {
 
     // If legacy workflows exist in settings.json, migrate them to vault files.
     // Do this BEFORE writing defaults so we don't create duplicate IDs from two
-    // different filename schemes. `settings.workflows` is deprecated — read here
-    // only for this one-time migration.
-    /* eslint-disable-next-line @typescript-eslint/no-deprecated */
-    if (this.settings.workflows && this.settings.workflows.length > 0) {
-      /* eslint-disable-next-line @typescript-eslint/no-deprecated */
-      await this.migrateWorkflows(this.settings.workflows);
-      /* eslint-disable-next-line @typescript-eslint/no-deprecated */
-      delete this.settings.workflows;
+    // different filename schemes. The `workflows` field only exists in pre-1.x
+    // saved data, so it's read via the LegacySettings shape for this one-time
+    // migration.
+    const legacy = this.settings as AlembicSettings & LegacySettings;
+    if (legacy.workflows && legacy.workflows.length > 0) {
+      await this.migrateWorkflows(legacy.workflows);
+      delete legacy.workflows;
       await this.saveSettings();
     } else {
       // No legacy data — seed defaults if the folder is empty

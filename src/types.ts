@@ -41,7 +41,10 @@ export function isFullNoteWorkflow(workflow: AlembicWorkflow): boolean {
 export interface AlembicSettings {
   providers: ProviderProfile[];
   workflowsFolder: string;
-  /** @deprecated Workflows are now stored as vault .md files. Kept only for one-time migration. */
+}
+
+/** Pre-1.x settings shape, before workflows moved to vault .md files. Used only for one-time migration. */
+export interface LegacySettings {
   workflows?: AlembicWorkflow[];
 }
 

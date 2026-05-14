@@ -2070,9 +2070,10 @@ var AlembicPlugin = class extends import_obsidian5.Plugin {
   async onload() {
     await this.loadSettings();
     await ensureWorkflowsFolder(this.app, this.settings.workflowsFolder);
-    if (this.settings.workflows && this.settings.workflows.length > 0) {
-      await this.migrateWorkflows(this.settings.workflows);
-      delete this.settings.workflows;
+    const legacy = this.settings;
+    if (legacy.workflows && legacy.workflows.length > 0) {
+      await this.migrateWorkflows(legacy.workflows);
+      delete legacy.workflows;
       await this.saveSettings();
     } else {
       const initial = await loadWorkflowsFromVault(this.app, this.settings.workflowsFolder);
