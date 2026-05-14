@@ -1,9 +1,9 @@
 {
-  "id": "obsidian-alembic",
-  "name": "Obsidian Alembic",
-  "version": "1.1.0",
+  "id": "writers-alembic",
+  "name": "Writers Alembic",
+  "version": "1.1.1",
   "minAppVersion": "0.15.0",
-  "description": "Sane AI writing workflow tool for Obsidian. Workflows live in your vault as Markdown files — edit, share, and run them on any note.",
+  "description": "Sane AI writing workflow tool. Workflows live in your vault as Markdown files — edit, share, and run them on any note.",
   "author": "Scott E. Detweiler",
   "authorUrl": "https://github.com/sedetweiler",
   "isDesktopOnly": true
