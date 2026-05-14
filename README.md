@@ -1,6 +1,6 @@
 # Alembic
 
-AI writing workflows for Obsidian, with prompts you actually own. Workflows live in your vault as Markdown files: edit them, share them, run them on any note.
+AI writing workflows for Obsidian, with prompts you can create and share. Workflows live in your vault as Markdown files: edit them, share them, run them on any note.
 
 <img width="833" height="865" alt="the workflow panel" src="https://github.com/user-attachments/assets/d25f010b-9711-41c2-8c0e-5ac625a80f4b" />
 
