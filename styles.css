@@ -2,7 +2,11 @@
 
 .alembic-notice {
   border-left: 3px solid var(--interactive-accent);
-  padding-left: 12px !important;
+}
+
+/* Doubled class raises specificity above Obsidian's core .notice padding rule. */
+.alembic-notice.alembic-notice {
+  padding-left: 12px;
 }
 
 .alembic-notice--error {
@@ -305,10 +309,10 @@
   font-size: 14px;
 }
 
-.alembic-settings .alembic-textarea {
+.alembic-settings textarea.alembic-textarea {
   width: 100%;
-  height: 80px !important;
-  min-height: 80px !important;
+  height: 80px;
+  min-height: 80px;
   padding: 6px 8px;
   border: 1px solid var(--background-modifier-border);
   border-radius: var(--radius-s);
