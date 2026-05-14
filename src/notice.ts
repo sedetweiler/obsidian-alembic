@@ -35,7 +35,7 @@ export function alembicFlash(
   variant: NoticeVariant = 'default',
 ): void {
   const notice = new Notice('', timeout);
-  const el = notice.noticeEl;
+  const el = notice.messageEl;
   el.addClass('alembic-notice');
   if (variant !== 'default') el.addClass(`alembic-notice--${variant}`);
   attachHeader(el, 'Alembic');
@@ -54,7 +54,7 @@ export interface RunNotice {
 
 export function alembicRunNotice(workflowName: string): RunNotice {
   const notice = new Notice('', 0);
-  const el = notice.noticeEl;
+  const el = notice.messageEl;
   el.addClass('alembic-notice');
 
   // Strip leading emoji from the workflow name so the ⚗️ in the header

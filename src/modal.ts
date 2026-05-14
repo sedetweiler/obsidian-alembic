@@ -1,4 +1,4 @@
-import { App, FuzzyMatch, FuzzySuggestModal, Modal, renderMatches } from 'obsidian';
+import { App, FuzzyMatch, FuzzySuggestModal, Modal, Platform, renderMatches } from 'obsidian';
 import { AlembicWorkflow, FREEFORM_WORKFLOW_ID, TOKEN_CONTEXT } from './types';
 
 interface Hotkey {
@@ -18,7 +18,7 @@ function getHotkeyStr(app: App, commandId: string): string {
   const hotkeys = manager.getHotkeys(commandId) ?? manager.getDefaultHotkeys(commandId) ?? [];
   if (!hotkeys.length) return '';
   const hk = hotkeys[0];
-  const isMac = navigator.platform.toUpperCase().includes('MAC');
+  const isMac = Platform.isMacOS;
   const mods = (hk.modifiers ?? []).map((m) => {
     switch (m) {
       case 'Mod':   return isMac ? '⌘' : 'Ctrl+';
@@ -118,7 +118,7 @@ export class FreeformModal extends Modal {
     const runBtn = contentEl.createEl('button', { text: 'Run', cls: 'alembic-run-btn' });
     runBtn.addEventListener('click', () => this.submit(textarea.value, humanizeCheckbox.checked));
 
-    setTimeout(() => textarea.focus(), 50);
+    window.setTimeout(() => textarea.focus(), 50);
   }
 
   onClose(): void {
@@ -131,4 +131,60 @@ export class FreeformModal extends Modal {
     this.close();
     this.onSubmit(prompt, humanize);
   }
+}
+
+/**
+ * A modal-based replacement for the browser `confirm()` dialog, which is not
+ * permitted in Obsidian plugins. Resolves to `true` if the user confirms,
+ * `false` if they cancel or dismiss the modal.
+ */
+export class ConfirmModal extends Modal {
+  private message: string;
+  private resolve!: (value: boolean) => void;
+  private decided = false;
+
+  constructor(app: App, message: string) {
+    super(app);
+    this.message = message;
+  }
+
+  ask(): Promise<boolean> {
+    const promise = new Promise<boolean>((res) => { this.resolve = res; });
+    this.open();
+    return promise;
+  }
+
+  onOpen(): void {
+    const { contentEl } = this;
+    contentEl.addClass('alembic-modal', 'alembic-confirm-modal');
+
+    for (const line of this.message.split('\n')) {
+      contentEl.createEl('p', { text: line, cls: 'alembic-confirm-line' });
+    }
+
+    const row = contentEl.createDiv('alembic-confirm-buttons');
+    const cancelBtn = row.createEl('button', { text: 'Cancel', cls: 'alembic-confirm-cancel' });
+    cancelBtn.addEventListener('click', () => this.decide(false));
+    const okBtn = row.createEl('button', { text: 'OK', cls: 'alembic-confirm-ok' });
+    okBtn.addEventListener('click', () => this.decide(true));
+
+    window.setTimeout(() => okBtn.focus(), 50);
+  }
+
+  onClose(): void {
+    this.contentEl.empty();
+    this.decide(false);
+  }
+
+  private decide(value: boolean): void {
+    if (this.decided) return;
+    this.decided = true;
+    this.resolve(value);
+    this.close();
+  }
+}
+
+/** Opens a confirmation modal and resolves to the user's choice. */
+export function confirmModal(app: App, message: string): Promise<boolean> {
+  return new ConfirmModal(app, message).ask();
 }

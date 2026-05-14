@@ -69,7 +69,7 @@ function getHotkeyStr(app, commandId) {
   if (!hotkeys.length)
     return "";
   const hk = hotkeys[0];
-  const isMac = navigator.platform.toUpperCase().includes("MAC");
+  const isMac = import_obsidian.Platform.isMacOS;
   const mods = ((_c = hk.modifiers) != null ? _c : []).map((m) => {
     switch (m) {
       case "Mod":
@@ -152,7 +152,7 @@ var FreeformModal = class extends import_obsidian.Modal {
     });
     const runBtn = contentEl.createEl("button", { text: "Run", cls: "alembic-run-btn" });
     runBtn.addEventListener("click", () => this.submit(textarea.value, humanizeCheckbox.checked));
-    setTimeout(() => textarea.focus(), 50);
+    window.setTimeout(() => textarea.focus(), 50);
   }
   onClose() {
     this.contentEl.empty();
@@ -165,6 +165,47 @@ var FreeformModal = class extends import_obsidian.Modal {
     this.onSubmit(prompt, humanize);
   }
 };
+var ConfirmModal = class extends import_obsidian.Modal {
+  constructor(app, message) {
+    super(app);
+    this.decided = false;
+    this.message = message;
+  }
+  ask() {
+    const promise = new Promise((res) => {
+      this.resolve = res;
+    });
+    this.open();
+    return promise;
+  }
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.addClass("alembic-modal", "alembic-confirm-modal");
+    for (const line of this.message.split("\n")) {
+      contentEl.createEl("p", { text: line, cls: "alembic-confirm-line" });
+    }
+    const row = contentEl.createDiv("alembic-confirm-buttons");
+    const cancelBtn = row.createEl("button", { text: "Cancel", cls: "alembic-confirm-cancel" });
+    cancelBtn.addEventListener("click", () => this.decide(false));
+    const okBtn = row.createEl("button", { text: "OK", cls: "alembic-confirm-ok" });
+    okBtn.addEventListener("click", () => this.decide(true));
+    window.setTimeout(() => okBtn.focus(), 50);
+  }
+  onClose() {
+    this.contentEl.empty();
+    this.decide(false);
+  }
+  decide(value) {
+    if (this.decided)
+      return;
+    this.decided = true;
+    this.resolve(value);
+    this.close();
+  }
+};
+function confirmModal(app, message) {
+  return new ConfirmModal(app, message).ask();
+}
 
 // src/settings.ts
 var import_obsidian4 = require("obsidian");
@@ -187,7 +228,7 @@ function attachHeader(el, title) {
 }
 function alembicFlash(message, timeout = 4e3, variant = "default") {
   const notice = new import_obsidian2.Notice("", timeout);
-  const el = notice.noticeEl;
+  const el = notice.messageEl;
   el.addClass("alembic-notice");
   if (variant !== "default")
     el.addClass(`alembic-notice--${variant}`);
@@ -196,7 +237,7 @@ function alembicFlash(message, timeout = 4e3, variant = "default") {
 }
 function alembicRunNotice(workflowName) {
   const notice = new import_obsidian2.Notice("", 0);
-  const el = notice.noticeEl;
+  const el = notice.messageEl;
   el.addClass("alembic-notice");
   const displayName = workflowName.replace(/^\p{Emoji}\uFE0F?\s*/u, "");
   attachHeader(el, displayName);
@@ -390,7 +431,7 @@ function cliRunHandle(cmd, args, input, notFoundMessage) {
     const settle = (r) => {
       if (!settled) {
         settled = true;
-        clearTimeout(timer);
+        window.clearTimeout(timer);
         resolve(r);
       }
     };
@@ -401,7 +442,7 @@ function cliRunHandle(cmd, args, input, notFoundMessage) {
       settle({ output: "", error: e.code === "ENOENT" ? notFoundMessage : (_a2 = e.message) != null ? _a2 : String(err) });
       return;
     }
-    const timer = setTimeout(() => {
+    const timer = window.setTimeout(() => {
       proc == null ? void 0 : proc.kill();
       settle({ output: "", error: `${cmd} did not respond within 5 minutes \u2014 the process was stopped.` });
     }, CLI_TIMEOUT_MS);
@@ -1246,6 +1287,13 @@ function workflowToMarkdown(workflow) {
   ];
   return lines.join("\n");
 }
+function fmString(value, fallback) {
+  if (typeof value === "string")
+    return value;
+  if (typeof value === "number" || typeof value === "boolean")
+    return String(value);
+  return fallback;
+}
 function markdownToWorkflow(content) {
   const normalized = content.replace(/\r\n/g, "\n");
   const lines = normalized.split("\n");
@@ -1256,19 +1304,19 @@ function markdownToWorkflow(content) {
     return null;
   try {
     const fm = (0, import_obsidian3.parseYaml)(lines.slice(1, closeIdx).join("\n"));
-    const id = fm.id != null ? String(fm.id) : "";
+    const id = fmString(fm.id, "");
     if (!id)
       return null;
     const body = lines.slice(closeIdx + 1).join("\n").replace(/^\n/, "");
     const rawDepth = fm.linkDepth != null ? Number(fm.linkDepth) : 1;
     return {
       id,
-      name: fm.name != null ? String(fm.name) : "Unnamed",
+      name: fmString(fm.name, "Unnamed"),
       systemPrompt: body,
-      prompt: fm.prompt != null ? String(fm.prompt) : "",
+      prompt: fmString(fm.prompt, ""),
       replaceSelection: Boolean(fm.replaceSelection),
       humanize: Boolean(fm.humanize),
-      providerId: fm.providerId != null ? String(fm.providerId) : CLAUDE_CLI_PROVIDER_ID,
+      providerId: fmString(fm.providerId, CLAUDE_CLI_PROVIDER_ID),
       linkDepth: Math.min(3, Math.max(0, isNaN(rawDepth) ? 0 : rawDepth))
     };
   } catch (e) {
@@ -1390,7 +1438,7 @@ async function pullNewWorkflowsFromRepo(app, folder, apiUrl) {
   }
 }
 function safeFilename(name) {
-  return name.replace(/[\\/:*?"<>|#\^[\]]/g, "").trim();
+  return name.replace(/[\\/:*?"<>|#^[\]]/g, "").trim();
 }
 function defaultFilenameFor(workflowId, workflowName) {
   var _a2;
@@ -1418,20 +1466,22 @@ var AlembicSettingTab = class extends import_obsidian4.PluginSettingTab {
         cls: "alembic-tab-btn" + (this.activeTab === tab ? " alembic-tab-active" : "")
       });
       btn.addEventListener("click", () => {
-        if (!this.confirmIfDirty())
-          return;
-        this.activeTab = tab;
-        this.display();
+        void (async () => {
+          if (!await this.confirmIfDirty())
+            return;
+          this.activeTab = tab;
+          this.display();
+        })();
       });
     });
     const discordLink = tabBar.createEl("a", { cls: "alembic-discord-link" });
     discordLink.href = "https://discord.gg/Y68Z7EJe9R";
     discordLink.target = "_blank";
     discordLink.rel = "noopener noreferrer";
-    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    const svg = activeDocument.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("viewBox", "0 0 24 24");
     svg.classList.add("alembic-discord-icon");
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    const path = activeDocument.createElementNS("http://www.w3.org/2000/svg", "path");
     path.setAttribute("d", "M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.002.022.015.043.034.055a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z");
     svg.appendChild(path);
     discordLink.appendChild(svg);
@@ -1443,19 +1493,23 @@ var AlembicSettingTab = class extends import_obsidian4.PluginSettingTab {
       folderInput.value = this.plugin.settings.workflowsFolder;
       folderInput.placeholder = "_alembic";
       const changeBtn = folderBar.createEl("button", { text: "Change", cls: "alembic-connect-btn" });
-      changeBtn.addEventListener("click", async () => {
-        const newFolder = folderInput.value.trim();
-        if (!newFolder || newFolder === this.plugin.settings.workflowsFolder)
-          return;
-        await this.changeWorkflowsFolder(newFolder);
-      });
-      folderInput.addEventListener("keydown", async (e) => {
-        if (e.key === "Enter") {
+      changeBtn.addEventListener("click", () => {
+        void (async () => {
           const newFolder = folderInput.value.trim();
           if (!newFolder || newFolder === this.plugin.settings.workflowsFolder)
             return;
           await this.changeWorkflowsFolder(newFolder);
-        }
+        })();
+      });
+      folderInput.addEventListener("keydown", (e) => {
+        void (async () => {
+          if (e.key === "Enter") {
+            const newFolder = folderInput.value.trim();
+            if (!newFolder || newFolder === this.plugin.settings.workflowsFolder)
+              return;
+            await this.changeWorkflowsFolder(newFolder);
+          }
+        })();
       });
     }
     const layout = containerEl.createDiv("alembic-layout");
@@ -1500,10 +1554,10 @@ var AlembicSettingTab = class extends import_obsidian4.PluginSettingTab {
     container.addEventListener("change", mark);
   }
   /** Returns true if safe to proceed (not dirty, or user confirmed discard). */
-  confirmIfDirty() {
+  async confirmIfDirty() {
     if (!this.dirty)
       return true;
-    if (confirm("You have unsaved changes. Discard them?")) {
+    if (await confirmModal(this.app, "You have unsaved changes. Discard them?")) {
       this.dirty = false;
       return true;
     }
@@ -1547,27 +1601,29 @@ var AlembicSettingTab = class extends import_obsidian4.PluginSettingTab {
     const header = sidebar.createDiv("alembic-sidebar-header");
     header.createSpan({ text: "Workflows", cls: "alembic-sidebar-title" });
     const addBtn = header.createEl("button", { text: "+", cls: "alembic-add-btn" });
-    addBtn.addEventListener("click", async () => {
-      const folder = this.plugin.settings.workflowsFolder;
-      let filename = "New Workflow.md";
-      let counter = 1;
-      while (this.app.vault.getAbstractFileByPath(`${folder}/${filename}`)) {
-        filename = `New Workflow ${++counter}.md`;
-      }
-      const newWorkflow = {
-        id: crypto.randomUUID(),
-        name: "New Workflow",
-        systemPrompt: "",
-        prompt: "",
-        replaceSelection: false,
-        humanize: false,
-        providerId: CLAUDE_CLI_PROVIDER_ID,
-        linkDepth: 1
-      };
-      await writeWorkflowFile(this.app, folder, filename, newWorkflow);
-      await this.plugin.reloadWorkflows();
-      this.activeWorkflowId = newWorkflow.id;
-      this.display();
+    addBtn.addEventListener("click", () => {
+      void (async () => {
+        const folder = this.plugin.settings.workflowsFolder;
+        let filename = "New Workflow.md";
+        let counter = 1;
+        while (this.app.vault.getAbstractFileByPath(`${folder}/${filename}`)) {
+          filename = `New Workflow ${++counter}.md`;
+        }
+        const newWorkflow = {
+          id: crypto.randomUUID(),
+          name: "New Workflow",
+          systemPrompt: "",
+          prompt: "",
+          replaceSelection: false,
+          humanize: false,
+          providerId: CLAUDE_CLI_PROVIDER_ID,
+          linkDepth: 1
+        };
+        await writeWorkflowFile(this.app, folder, filename, newWorkflow);
+        await this.plugin.reloadWorkflows();
+        this.activeWorkflowId = newWorkflow.id;
+        this.display();
+      })();
     });
     if (!this.activeWorkflowId && this.plugin.workflows.length > 0) {
       this.activeWorkflowId = this.plugin.workflows[0].id;
@@ -1579,57 +1635,63 @@ var AlembicSettingTab = class extends import_obsidian4.PluginSettingTab {
         cls: "alembic-sidebar-item" + (w.id === this.activeWorkflowId ? " alembic-active" : "")
       });
       item.addEventListener("click", () => {
-        if (!this.confirmIfDirty())
-          return;
-        this.activeWorkflowId = w.id;
-        this.display();
+        void (async () => {
+          if (!await this.confirmIfDirty())
+            return;
+          this.activeWorkflowId = w.id;
+          this.display();
+        })();
       });
     });
     const restoreBtn = sidebar.createEl("button", { text: "Restore defaults", cls: "alembic-restore-btn" });
-    restoreBtn.addEventListener("click", async () => {
-      var _a2, _b;
-      if (restoreBtn.textContent === "Restore defaults") {
-        restoreBtn.textContent = "Are you sure?";
-        restoreBtn.addClass("alembic-restore-btn-confirm");
-        setTimeout(() => {
-          if (restoreBtn.isConnected) {
-            restoreBtn.textContent = "Restore defaults";
-            restoreBtn.removeClass("alembic-restore-btn-confirm");
-          }
-        }, 3e3);
-        return;
-      }
-      await writeDefaultWorkflows(this.app, this.plugin.settings.workflowsFolder);
-      await this.plugin.reloadWorkflows();
-      this.activeWorkflowId = (_b = (_a2 = this.plugin.workflows[0]) == null ? void 0 : _a2.id) != null ? _b : null;
-      this.display();
+    restoreBtn.addEventListener("click", () => {
+      void (async () => {
+        var _a2, _b;
+        if (restoreBtn.textContent === "Restore defaults") {
+          restoreBtn.textContent = "Are you sure?";
+          restoreBtn.addClass("alembic-restore-btn-confirm");
+          window.setTimeout(() => {
+            if (restoreBtn.isConnected) {
+              restoreBtn.textContent = "Restore defaults";
+              restoreBtn.removeClass("alembic-restore-btn-confirm");
+            }
+          }, 3e3);
+          return;
+        }
+        await writeDefaultWorkflows(this.app, this.plugin.settings.workflowsFolder);
+        await this.plugin.reloadWorkflows();
+        this.activeWorkflowId = (_b = (_a2 = this.plugin.workflows[0]) == null ? void 0 : _a2.id) != null ? _b : null;
+        this.display();
+      })();
     });
     const pullBtn = sidebar.createEl("button", { text: "\u2193 Pull new workflows", cls: "alembic-restore-btn" });
-    pullBtn.addEventListener("click", async () => {
-      pullBtn.textContent = "Checking\u2026";
-      pullBtn.disabled = true;
-      const result = await pullNewWorkflowsFromRepo(
-        this.app,
-        this.plugin.settings.workflowsFolder,
-        WORKFLOWS_REPO_API_URL
-      );
-      pullBtn.disabled = false;
-      pullBtn.textContent = "\u2193 Pull new workflows";
-      if (result.error) {
-        alembicFlash(`Could not reach the repository: ${result.error}`, 6e3, "error");
-        return;
-      }
-      if (result.added.length === 0) {
-        alembicFlash("Already up to date.", 3e3);
-        return;
-      }
-      await this.plugin.reloadWorkflows();
-      this.display();
-      alembicFlash(
-        `Added ${result.added.length} workflow${result.added.length !== 1 ? "s" : ""}: ${result.added.join(", ")}.`,
-        5e3,
-        "success"
-      );
+    pullBtn.addEventListener("click", () => {
+      void (async () => {
+        pullBtn.textContent = "Checking\u2026";
+        pullBtn.disabled = true;
+        const result = await pullNewWorkflowsFromRepo(
+          this.app,
+          this.plugin.settings.workflowsFolder,
+          WORKFLOWS_REPO_API_URL
+        );
+        pullBtn.disabled = false;
+        pullBtn.textContent = "\u2193 Pull new workflows";
+        if (result.error) {
+          alembicFlash(`Could not reach the repository: ${result.error}`, 6e3, "error");
+          return;
+        }
+        if (result.added.length === 0) {
+          alembicFlash("Already up to date.", 3e3);
+          return;
+        }
+        await this.plugin.reloadWorkflows();
+        this.display();
+        alembicFlash(
+          `Added ${result.added.length} workflow${result.added.length !== 1 ? "s" : ""}: ${result.added.join(", ")}.`,
+          5e3,
+          "success"
+        );
+      })();
     });
   }
   renderWorkflowDetail(detail) {
@@ -1647,7 +1709,7 @@ var AlembicSettingTab = class extends import_obsidian4.PluginSettingTab {
     if (tfile) {
       const openBtn = openRow.createEl("button", { text: "\u2197 Open in editor", cls: "alembic-connect-btn" });
       openBtn.addEventListener("click", () => {
-        this.app.workspace.getLeaf("tab").openFile(tfile);
+        void this.app.workspace.getLeaf("tab").openFile(tfile);
       });
     }
     openRow.createSpan({ text: tfile ? tfile.path : "", cls: "alembic-file-path" });
@@ -1714,52 +1776,58 @@ var AlembicSettingTab = class extends import_obsidian4.PluginSettingTab {
     });
     const buttonRow = detail.createDiv("alembic-button-row");
     const deleteBtn = buttonRow.createEl("button", { text: "Delete", cls: "alembic-delete-btn" });
-    deleteBtn.addEventListener("click", async () => {
-      var _a3, _b;
-      if (!confirm(`Delete "${workflow.name}"? The file will be moved to your system trash.`))
-        return;
-      this.dirty = false;
-      const file = this.plugin.workflowFileMap.get(workflow.id);
-      if (file) {
-        await this.app.vault.trash(file, true);
-      }
-      await this.plugin.reloadWorkflows();
-      this.activeWorkflowId = (_b = (_a3 = this.plugin.workflows[0]) == null ? void 0 : _a3.id) != null ? _b : null;
-      this.display();
+    deleteBtn.addEventListener("click", () => {
+      void (async () => {
+        var _a3, _b;
+        if (!await confirmModal(this.app, `Delete "${workflow.name}"? The file will be moved to trash.`))
+          return;
+        this.dirty = false;
+        const file = this.plugin.workflowFileMap.get(workflow.id);
+        if (file) {
+          await this.app.fileManager.trashFile(file);
+        }
+        await this.plugin.reloadWorkflows();
+        this.activeWorkflowId = (_b = (_a3 = this.plugin.workflows[0]) == null ? void 0 : _a3.id) != null ? _b : null;
+        this.display();
+      })();
     });
     if (isDefaultWorkflow(workflow.id)) {
       const resetBtn = buttonRow.createEl("button", { text: "Reset to default", cls: "alembic-reset-btn" });
-      resetBtn.addEventListener("click", async () => {
-        if (!confirm(`Reset "${workflow.name}" to its built-in default? Any edits will be overwritten.`))
-          return;
-        this.dirty = false;
-        const ok = await resetWorkflowToDefault(this.app, this.plugin.settings.workflowsFolder, workflow.id);
-        await this.plugin.reloadWorkflows();
-        this.display();
-        if (ok) {
-          alembicFlash(`${workflow.name} reset to default.`, 3e3);
-        } else {
-          alembicFlash(`Could not reset "${workflow.name}" \u2014 no bundled default found.`, 5e3, "error");
-        }
+      resetBtn.addEventListener("click", () => {
+        void (async () => {
+          if (!await confirmModal(this.app, `Reset "${workflow.name}" to its built-in default? Any edits will be overwritten.`))
+            return;
+          this.dirty = false;
+          const ok = await resetWorkflowToDefault(this.app, this.plugin.settings.workflowsFolder, workflow.id);
+          await this.plugin.reloadWorkflows();
+          this.display();
+          if (ok) {
+            alembicFlash(`${workflow.name} reset to default.`, 3e3);
+          } else {
+            alembicFlash(`Could not reset "${workflow.name}" \u2014 no bundled default found.`, 5e3, "error");
+          }
+        })();
       });
     }
     const saveBtn = buttonRow.createEl("button", { text: "Save", cls: "alembic-save-btn" });
-    saveBtn.addEventListener("click", async () => {
-      if (!draft.name.trim()) {
-        alembicFlash("Workflow name cannot be empty.", 5e3, "error");
-        return;
-      }
-      if (!this.plugin.settings.providers.some((p) => p.id === draft.providerId)) {
-        alembicFlash("The selected provider no longer exists. Choose another.", 5e3, "error");
-        return;
-      }
-      const existingFile = this.plugin.workflowFileMap.get(workflow.id);
-      const filename = existingFile ? existingFile.name : safeFilename(draft.name) + ".md";
-      await writeWorkflowFile(this.app, this.plugin.settings.workflowsFolder, filename, draft);
-      this.dirty = false;
-      await this.plugin.reloadWorkflows();
-      this.activeWorkflowId = draft.id;
-      this.display();
+    saveBtn.addEventListener("click", () => {
+      void (async () => {
+        if (!draft.name.trim()) {
+          alembicFlash("Workflow name cannot be empty.", 5e3, "error");
+          return;
+        }
+        if (!this.plugin.settings.providers.some((p) => p.id === draft.providerId)) {
+          alembicFlash("The selected provider no longer exists. Choose another.", 5e3, "error");
+          return;
+        }
+        const existingFile = this.plugin.workflowFileMap.get(workflow.id);
+        const filename = existingFile ? existingFile.name : safeFilename(draft.name) + ".md";
+        await writeWorkflowFile(this.app, this.plugin.settings.workflowsFolder, filename, draft);
+        this.dirty = false;
+        await this.plugin.reloadWorkflows();
+        this.activeWorkflowId = draft.id;
+        this.display();
+      })();
     });
   }
   // ── Providers tab ─────────────────────────────────────────────────────────
@@ -1767,18 +1835,20 @@ var AlembicSettingTab = class extends import_obsidian4.PluginSettingTab {
     const header = sidebar.createDiv("alembic-sidebar-header");
     header.createSpan({ text: "Providers", cls: "alembic-sidebar-title" });
     const addBtn = header.createEl("button", { text: "+", cls: "alembic-add-btn" });
-    addBtn.addEventListener("click", async () => {
-      const newProvider = {
-        id: crypto.randomUUID(),
-        name: "New Provider",
-        type: "ollama",
-        baseUrl: "http://localhost:11434",
-        model: "llama3.2"
-      };
-      this.plugin.settings.providers.push(newProvider);
-      await this.plugin.saveSettings();
-      this.activeProviderId = newProvider.id;
-      this.display();
+    addBtn.addEventListener("click", () => {
+      void (async () => {
+        const newProvider = {
+          id: crypto.randomUUID(),
+          name: "New Provider",
+          type: "ollama",
+          baseUrl: "http://localhost:11434",
+          model: "llama3.2"
+        };
+        this.plugin.settings.providers.push(newProvider);
+        await this.plugin.saveSettings();
+        this.activeProviderId = newProvider.id;
+        this.display();
+      })();
     });
     const list = sidebar.createEl("ul", { cls: "alembic-sidebar-list" });
     this.plugin.settings.providers.forEach((p) => {
@@ -1787,10 +1857,12 @@ var AlembicSettingTab = class extends import_obsidian4.PluginSettingTab {
         cls: "alembic-sidebar-item" + (p.id === this.activeProviderId ? " alembic-active" : "")
       });
       item.addEventListener("click", () => {
-        if (!this.confirmIfDirty())
-          return;
-        this.activeProviderId = p.id;
-        this.display();
+        void (async () => {
+          if (!await this.confirmIfDirty())
+            return;
+          this.activeProviderId = p.id;
+          this.display();
+        })();
       });
     });
     if (!this.activeProviderId && this.plugin.settings.providers.length > 0) {
@@ -1872,35 +1944,38 @@ var AlembicSettingTab = class extends import_obsidian4.PluginSettingTab {
       const connectRow = dynamicFields.createDiv("alembic-connect-row");
       const connectBtn = connectRow.createEl("button", { text: "Test Connection", cls: "alembic-connect-btn" });
       const statusEl = connectRow.createSpan({ cls: "alembic-connect-status" });
-      connectBtn.addEventListener("click", async () => {
-        connectBtn.disabled = true;
-        connectBtn.textContent = "Connecting\u2026";
-        statusEl.textContent = "";
-        statusEl.className = "alembic-connect-status";
-        const result = await fetchProviderModels({ ...draft, type });
-        connectBtn.disabled = false;
-        connectBtn.textContent = "Test Connection";
-        if (result.error) {
-          statusEl.textContent = "\u2717 " + result.error;
-          statusEl.addClass("alembic-status-error");
-        } else if (meta.isCli) {
-          statusEl.textContent = `\u2713 ${meta.label} is reachable`;
-          statusEl.addClass("alembic-status-ok");
-        } else {
-          statusEl.textContent = `\u2713 Connected \u2014 ${result.models.length} model${result.models.length !== 1 ? "s" : ""} found`;
-          statusEl.addClass("alembic-status-ok");
-          if (modelChips && result.models.length > 0) {
-            modelChips.empty();
-            result.models.forEach((m) => {
-              const chip = modelChips.createEl("button", { text: m, cls: "alembic-model-chip" });
-              chip.type = "button";
-              chip.addEventListener("click", () => {
-                modelInput.value = m;
-                draft.model = m;
+      connectBtn.addEventListener("click", () => {
+        void (async () => {
+          connectBtn.disabled = true;
+          connectBtn.textContent = "Connecting\u2026";
+          statusEl.textContent = "";
+          statusEl.className = "alembic-connect-status";
+          const result = await fetchProviderModels({ ...draft, type });
+          connectBtn.disabled = false;
+          connectBtn.textContent = "Test Connection";
+          if (result.error) {
+            statusEl.textContent = "\u2717 " + result.error;
+            statusEl.addClass("alembic-status-error");
+          } else if (meta.isCli) {
+            statusEl.textContent = `\u2713 ${meta.label} is reachable`;
+            statusEl.addClass("alembic-status-ok");
+          } else {
+            statusEl.textContent = `\u2713 Connected \u2014 ${result.models.length} model${result.models.length !== 1 ? "s" : ""} found`;
+            statusEl.addClass("alembic-status-ok");
+            if (modelChips && result.models.length > 0) {
+              const chips = modelChips;
+              chips.empty();
+              result.models.forEach((m) => {
+                const chip = chips.createEl("button", { text: m, cls: "alembic-model-chip" });
+                chip.type = "button";
+                chip.addEventListener("click", () => {
+                  modelInput.value = m;
+                  draft.model = m;
+                });
               });
-            });
+            }
           }
-        }
+        })();
       });
     };
     renderDynamic(draft.type);
@@ -1911,48 +1986,52 @@ var AlembicSettingTab = class extends import_obsidian4.PluginSettingTab {
     const buttonRow = detail.createDiv("alembic-button-row");
     if (!isBuiltIn) {
       const deleteBtn = buttonRow.createEl("button", { text: "Delete", cls: "alembic-delete-btn" });
-      deleteBtn.addEventListener("click", async () => {
-        var _a3, _b;
-        const affected = this.plugin.workflows.filter((w) => w.providerId === provider.id);
-        const fallback = this.plugin.settings.providers.find((p) => p.id !== provider.id);
-        let msg = `Delete "${provider.name}"?`;
-        if (affected.length > 0) {
-          const names = affected.map((w) => w.name).join(", ");
-          msg += fallback ? `
+      deleteBtn.addEventListener("click", () => {
+        void (async () => {
+          var _a3, _b;
+          const affected = this.plugin.workflows.filter((w) => w.providerId === provider.id);
+          const fallback = this.plugin.settings.providers.find((p) => p.id !== provider.id);
+          let msg = `Delete "${provider.name}"?`;
+          if (affected.length > 0) {
+            const names = affected.map((w) => w.name).join(", ");
+            msg += fallback ? `
 
 ${affected.length} workflow(s) use this provider (${names}) and will be reassigned to "${fallback.name}".` : `
 
 ${affected.length} workflow(s) use this provider (${names}). No other provider exists \u2014 they will have no provider until you add one.`;
-        }
-        if (!confirm(msg))
-          return;
-        if (affected.length > 0 && fallback) {
-          await Promise.all(affected.map((wf) => {
-            wf.providerId = fallback.id;
-            const file = this.plugin.workflowFileMap.get(wf.id);
-            return file ? writeWorkflowFile(this.app, this.plugin.settings.workflowsFolder, file.name, wf) : Promise.resolve();
-          }));
-        }
-        this.plugin.settings.providers = this.plugin.settings.providers.filter((p) => p.id !== provider.id);
-        this.activeProviderId = (_b = (_a3 = this.plugin.settings.providers[0]) == null ? void 0 : _a3.id) != null ? _b : null;
-        await this.plugin.saveSettings();
-        await this.plugin.reloadWorkflows();
-        this.display();
+          }
+          if (!await confirmModal(this.app, msg))
+            return;
+          if (affected.length > 0 && fallback) {
+            await Promise.all(affected.map((wf) => {
+              wf.providerId = fallback.id;
+              const file = this.plugin.workflowFileMap.get(wf.id);
+              return file ? writeWorkflowFile(this.app, this.plugin.settings.workflowsFolder, file.name, wf) : Promise.resolve();
+            }));
+          }
+          this.plugin.settings.providers = this.plugin.settings.providers.filter((p) => p.id !== provider.id);
+          this.activeProviderId = (_b = (_a3 = this.plugin.settings.providers[0]) == null ? void 0 : _a3.id) != null ? _b : null;
+          await this.plugin.saveSettings();
+          await this.plugin.reloadWorkflows();
+          this.display();
+        })();
       });
     }
     const saveBtn = buttonRow.createEl("button", { text: "Save", cls: "alembic-save-btn" });
-    saveBtn.addEventListener("click", async () => {
-      if (!draft.name.trim()) {
-        alembicFlash("Provider name cannot be empty.", 5e3, "error");
-        return;
-      }
-      const idx = this.plugin.settings.providers.findIndex((p) => p.id === provider.id);
-      if (idx !== -1) {
-        this.plugin.settings.providers[idx] = draft;
-        this.dirty = false;
-        await this.plugin.saveSettings();
-        this.display();
-      }
+    saveBtn.addEventListener("click", () => {
+      void (async () => {
+        if (!draft.name.trim()) {
+          alembicFlash("Provider name cannot be empty.", 5e3, "error");
+          return;
+        }
+        const idx = this.plugin.settings.providers.findIndex((p) => p.id === provider.id);
+        if (idx !== -1) {
+          this.plugin.settings.providers[idx] = draft;
+          this.dirty = false;
+          await this.plugin.saveSettings();
+          this.display();
+        }
+      })();
     });
   }
 };
@@ -2005,19 +2084,19 @@ var AlembicPlugin = class extends import_obsidian5.Plugin {
     this.addSettingTab(new AlembicSettingTab(this.app, this));
     this.registerEvent(this.app.vault.on("create", (f) => {
       if (this.isWorkflowFile(f.path))
-        this.reloadWorkflows();
+        void this.reloadWorkflows();
     }));
     this.registerEvent(this.app.vault.on("modify", (f) => {
       if (this.isWorkflowFile(f.path))
-        this.reloadWorkflows();
+        void this.reloadWorkflows();
     }));
     this.registerEvent(this.app.vault.on("delete", (f) => {
       if (this.isWorkflowFile(f.path))
-        this.reloadWorkflows();
+        void this.reloadWorkflows();
     }));
     this.registerEvent(this.app.vault.on("rename", (f, oldPath) => {
       if (this.isWorkflowFile(f.path) || this.isWorkflowFile(oldPath))
-        this.reloadWorkflows();
+        void this.reloadWorkflows();
     }));
     this.addCommand({
       id: "open-workflow-selector",
@@ -2026,7 +2105,9 @@ var AlembicPlugin = class extends import_obsidian5.Plugin {
         new WorkflowSelectorModal(
           this.app,
           this.workflows,
-          (workflow) => this.executeWorkflow(editor, workflow)
+          (workflow) => {
+            void this.executeWorkflow(editor, workflow);
+          }
         ).open();
       }
     });
@@ -2069,14 +2150,14 @@ var AlembicPlugin = class extends import_obsidian5.Plugin {
         }
         if (live.id === FREEFORM_WORKFLOW_ID) {
           new FreeformModal(this.app, live, (prompt, humanize) => {
-            this.executeWorkflow(editor, { ...live, prompt: `${TOKEN_CONTEXT}
+            void this.executeWorkflow(editor, { ...live, prompt: `${TOKEN_CONTEXT}
 
 ---
 
 ${prompt}`, humanize });
           }).open();
         } else {
-          this.executeWorkflow(editor, live);
+          void this.executeWorkflow(editor, live);
         }
       }
     });
@@ -2101,7 +2182,11 @@ ${prompt}`, humanize });
     const totalChars = userMessage.length + workflow.systemPrompt.length;
     if (totalChars > 1e5) {
       const approxKb = Math.round(totalChars / 1024);
-      if (!confirm(`The context being sent is ~${approxKb} KB (including linked notes). This may be slow or hit token limits. Continue?`))
+      const proceed = await confirmModal(
+        this.app,
+        `The context being sent is ~${approxKb} KB (including linked notes). This may be slow or hit token limits. Continue?`
+      );
+      if (!proceed)
         return;
     }
     const profile = (_a2 = this.settings.providers.find((p) => p.id === workflow.providerId)) != null ? _a2 : this.settings.providers[0];
@@ -2111,14 +2196,14 @@ ${prompt}`, humanize });
     }
     let msgIdx = 0;
     const run = alembicRunNotice(workflow.name);
-    const ticker = setInterval(() => {
+    const ticker = window.setInterval(() => {
       msgIdx = (msgIdx + 1) % WAIT_MESSAGES.length;
       run.setStatus(WAIT_MESSAGES[msgIdx]);
     }, 7e3);
     let cancelCurrent = null;
     run.addCancelButton(() => cancelCurrent == null ? void 0 : cancelCurrent());
     const finish = () => {
-      clearInterval(ticker);
+      window.clearInterval(ticker);
       run.hide();
     };
     try {

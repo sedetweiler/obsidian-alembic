@@ -497,6 +497,46 @@
   background: var(--interactive-accent-hover);
 }
 
+/* ── Confirm modal ───────────────────────────────── */
+
+.alembic-confirm-modal .alembic-confirm-line {
+  font-size: 14px;
+  color: var(--text-normal);
+  line-height: 1.4;
+  margin: 0 0 8px 0;
+}
+
+.alembic-confirm-modal .alembic-confirm-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.alembic-confirm-modal .alembic-confirm-cancel,
+.alembic-confirm-modal .alembic-confirm-ok {
+  border: none;
+  border-radius: var(--radius-m);
+  padding: 6px 18px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.alembic-confirm-modal .alembic-confirm-cancel {
+  background: var(--background-modifier-border);
+  color: var(--text-normal);
+}
+
+.alembic-confirm-modal .alembic-confirm-ok {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.alembic-confirm-modal .alembic-confirm-ok:hover {
+  background: var(--interactive-accent-hover);
+}
+
 /* ── Workflows folder bar ────────────────────────────────────────── */
 
 .alembic-settings .alembic-folder-bar {

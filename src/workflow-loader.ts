@@ -47,6 +47,13 @@ export function workflowToMarkdown(workflow: AlembicWorkflow): string {
   return lines.join('\n');
 }
 
+/** Coerce a parsed YAML value to a string, falling back when it is not a scalar. */
+function fmString(value: unknown, fallback: string): string {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  return fallback;
+}
+
 export function markdownToWorkflow(content: string): AlembicWorkflow | null {
   const normalized = content.replace(/\r\n/g, '\n');
   const lines = normalized.split('\n');
@@ -57,7 +64,7 @@ export function markdownToWorkflow(content: string): AlembicWorkflow | null {
 
   try {
     const fm = parseYaml(lines.slice(1, closeIdx).join('\n')) as Record<string, unknown>;
-    const id = fm.id != null ? String(fm.id) : '';
+    const id = fmString(fm.id, '');
     if (!id) return null;
 
     const body = lines.slice(closeIdx + 1).join('\n').replace(/^\n/, '');
@@ -65,12 +72,12 @@ export function markdownToWorkflow(content: string): AlembicWorkflow | null {
     const rawDepth = fm.linkDepth != null ? Number(fm.linkDepth) : 1;
     return {
       id,
-      name:            fm.name        != null ? String(fm.name)        : 'Unnamed',
+      name:            fmString(fm.name, 'Unnamed'),
       systemPrompt:    body,
-      prompt:          fm.prompt      != null ? String(fm.prompt)      : '',
+      prompt:          fmString(fm.prompt, ''),
       replaceSelection: Boolean(fm.replaceSelection),
       humanize:        Boolean(fm.humanize),
-      providerId:      fm.providerId  != null ? String(fm.providerId)  : CLAUDE_CLI_PROVIDER_ID,
+      providerId:      fmString(fm.providerId, CLAUDE_CLI_PROVIDER_ID),
       linkDepth:       Math.min(3, Math.max(0, isNaN(rawDepth) ? 0 : rawDepth)),
     };
   } catch {
@@ -184,7 +191,7 @@ export async function resetWorkflowToDefault(
 ): Promise<boolean> {
   const filename = DEFAULT_FILENAMES[workflowId];
   if (!filename) return false;
-  const content = (BUNDLED_WORKFLOWS as Record<string, string>)[filename];
+  const content = BUNDLED_WORKFLOWS[filename];
   if (!content) return false;
   const path = `${folder}/${filename}`;
   const existing = app.vault.getAbstractFileByPath(path);
@@ -217,7 +224,7 @@ export async function pullNewWorkflowsFromRepo(
     });
 
     // GitHub returns a JSON object (not array) on error, e.g. {"message":"Not Found"}
-    const body = listing.json;
+    const body: unknown = listing.json;
     if (!Array.isArray(body)) {
       const msg = (body as { message?: string })?.message ?? `HTTP ${listing.status}`;
       return { added: [], error: msg };
@@ -250,7 +257,7 @@ export async function pullNewWorkflowsFromRepo(
 
 /** Strip characters that are invalid in vault file names. */
 export function safeFilename(name: string): string {
-  return name.replace(/[\\/:*?"<>|#\^[\]]/g, '').trim();
+  return name.replace(/[\\/:*?"<>|#^[\]]/g, '').trim();
 }
 
 /**

@@ -147,7 +147,7 @@ function cliRunHandle(cmd: string, args: string[], input: string, notFoundMessag
 
   const promise = new Promise<RunResult>((resolve) => {
     externalResolve = resolve;
-    const settle = (r: RunResult) => { if (!settled) { settled = true; clearTimeout(timer); resolve(r); } };
+    const settle = (r: RunResult) => { if (!settled) { settled = true; window.clearTimeout(timer); resolve(r); } };
 
     try {
       proc = spawn(cmd, args, { stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, PATH: AUGMENTED_PATH } });
@@ -157,7 +157,7 @@ function cliRunHandle(cmd: string, args: string[], input: string, notFoundMessag
       return;
     }
 
-    const timer = setTimeout(() => {
+    const timer = window.setTimeout(() => {
       proc?.kill();
       settle({ output: '', error: `${cmd} did not respond within 5 minutes — the process was stopped.` });
     }, CLI_TIMEOUT_MS);

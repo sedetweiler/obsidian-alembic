@@ -1,5 +1,6 @@
 import { App, PluginSettingTab, TFolder } from 'obsidian';
 import { alembicFlash } from './notice';
+import { confirmModal } from './modal';
 import { AlembicWorkflow, ProviderProfile, ProviderType, CLAUDE_CLI_PROVIDER_ID, FREEFORM_WORKFLOW_ID, HUMANIZE_WORKFLOW_ID, WORKFLOWS_REPO_API_URL, TOKEN_SELECTION, TOKEN_CONTEXT } from './types';
 import { PROVIDER_META, PROVIDER_META_MAP } from './providers';
 import { fetchProviderModels } from './runner';
@@ -32,21 +33,21 @@ export class AlembicSettingTab extends PluginSettingTab {
         text: tab === 'workflows' ? 'Workflows' : 'Providers',
         cls: 'alembic-tab-btn' + (this.activeTab === tab ? ' alembic-tab-active' : ''),
       });
-      btn.addEventListener('click', () => {
-        if (!this.confirmIfDirty()) return;
+      btn.addEventListener('click', () => { void (async () => {
+        if (!(await this.confirmIfDirty())) return;
         this.activeTab = tab;
         this.display();
-      });
+      })(); });
     });
 
     const discordLink = tabBar.createEl('a', { cls: 'alembic-discord-link' });
     discordLink.href = 'https://discord.gg/Y68Z7EJe9R';
     discordLink.target = '_blank';
     discordLink.rel = 'noopener noreferrer';
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    const svg = activeDocument.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('viewBox', '0 0 24 24');
     svg.classList.add('alembic-discord-icon');
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    const path = activeDocument.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute('d', 'M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.002.022.015.043.034.055a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z');
     svg.appendChild(path);
     discordLink.appendChild(svg);
@@ -60,19 +61,19 @@ export class AlembicSettingTab extends PluginSettingTab {
       folderInput.value = this.plugin.settings.workflowsFolder;
       folderInput.placeholder = '_alembic';
       const changeBtn = folderBar.createEl('button', { text: 'Change', cls: 'alembic-connect-btn' });
-      changeBtn.addEventListener('click', async () => {
+      changeBtn.addEventListener('click', () => { void (async () => {
         const newFolder = folderInput.value.trim();
         if (!newFolder || newFolder === this.plugin.settings.workflowsFolder) return;
         await this.changeWorkflowsFolder(newFolder);
-      });
+      })(); });
       // Allow Enter key to submit
-      folderInput.addEventListener('keydown', async (e) => {
+      folderInput.addEventListener('keydown', (e) => { void (async () => {
         if (e.key === 'Enter') {
           const newFolder = folderInput.value.trim();
           if (!newFolder || newFolder === this.plugin.settings.workflowsFolder) return;
           await this.changeWorkflowsFolder(newFolder);
         }
-      });
+      })(); });
     }
 
     const layout = containerEl.createDiv('alembic-layout');
@@ -123,9 +124,9 @@ export class AlembicSettingTab extends PluginSettingTab {
   }
 
   /** Returns true if safe to proceed (not dirty, or user confirmed discard). */
-  private confirmIfDirty(): boolean {
+  private async confirmIfDirty(): Promise<boolean> {
     if (!this.dirty) return true;
-    if (confirm('You have unsaved changes. Discard them?')) {
+    if (await confirmModal(this.app, 'You have unsaved changes. Discard them?')) {
       this.dirty = false;
       return true;
     }
@@ -185,7 +186,7 @@ export class AlembicSettingTab extends PluginSettingTab {
     header.createSpan({ text: 'Workflows', cls: 'alembic-sidebar-title' });
 
     const addBtn = header.createEl('button', { text: '+', cls: 'alembic-add-btn' });
-    addBtn.addEventListener('click', async () => {
+    addBtn.addEventListener('click', () => { void (async () => {
       const folder = this.plugin.settings.workflowsFolder;
       // Find a unique filename
       let filename = 'New Workflow.md';
@@ -207,7 +208,7 @@ export class AlembicSettingTab extends PluginSettingTab {
       await this.plugin.reloadWorkflows();
       this.activeWorkflowId = newWorkflow.id;
       this.display();
-    });
+    })(); });
 
     if (!this.activeWorkflowId && this.plugin.workflows.length > 0) {
       this.activeWorkflowId = this.plugin.workflows[0].id;
@@ -219,15 +220,15 @@ export class AlembicSettingTab extends PluginSettingTab {
         text: w.name,
         cls: 'alembic-sidebar-item' + (w.id === this.activeWorkflowId ? ' alembic-active' : ''),
       });
-      item.addEventListener('click', () => { if (!this.confirmIfDirty()) return; this.activeWorkflowId = w.id; this.display(); });
+      item.addEventListener('click', () => { void (async () => { if (!(await this.confirmIfDirty())) return; this.activeWorkflowId = w.id; this.display(); })(); });
     });
 
     const restoreBtn = sidebar.createEl('button', { text: 'Restore defaults', cls: 'alembic-restore-btn' });
-    restoreBtn.addEventListener('click', async () => {
+    restoreBtn.addEventListener('click', () => { void (async () => {
       if (restoreBtn.textContent === 'Restore defaults') {
         restoreBtn.textContent = 'Are you sure?';
         restoreBtn.addClass('alembic-restore-btn-confirm');
-        setTimeout(() => {
+        window.setTimeout(() => {
           if (restoreBtn.isConnected) {
             restoreBtn.textContent = 'Restore defaults';
             restoreBtn.removeClass('alembic-restore-btn-confirm');
@@ -239,10 +240,10 @@ export class AlembicSettingTab extends PluginSettingTab {
       await this.plugin.reloadWorkflows();
       this.activeWorkflowId = this.plugin.workflows[0]?.id ?? null;
       this.display();
-    });
+    })(); });
 
     const pullBtn = sidebar.createEl('button', { text: '↓ Pull new workflows', cls: 'alembic-restore-btn' });
-    pullBtn.addEventListener('click', async () => {
+    pullBtn.addEventListener('click', () => { void (async () => {
       pullBtn.textContent = 'Checking…';
       pullBtn.disabled = true;
       const result = await pullNewWorkflowsFromRepo(
@@ -267,7 +268,7 @@ export class AlembicSettingTab extends PluginSettingTab {
         5000,
         'success',
       );
-    });
+    })(); });
   }
 
   private renderWorkflowDetail(detail: HTMLElement): void {
@@ -287,7 +288,7 @@ export class AlembicSettingTab extends PluginSettingTab {
     if (tfile) {
       const openBtn = openRow.createEl('button', { text: '↗ Open in editor', cls: 'alembic-connect-btn' });
       openBtn.addEventListener('click', () => {
-        this.app.workspace.getLeaf('tab').openFile(tfile);
+        void this.app.workspace.getLeaf('tab').openFile(tfile);
       });
     }
     openRow.createSpan({ text: tfile ? tfile.path : '', cls: 'alembic-file-path' });
@@ -350,22 +351,22 @@ export class AlembicSettingTab extends PluginSettingTab {
     const buttonRow = detail.createDiv('alembic-button-row');
 
     const deleteBtn = buttonRow.createEl('button', { text: 'Delete', cls: 'alembic-delete-btn' });
-    deleteBtn.addEventListener('click', async () => {
-      if (!confirm(`Delete "${workflow.name}"? The file will be moved to your system trash.`)) return;
+    deleteBtn.addEventListener('click', () => { void (async () => {
+      if (!(await confirmModal(this.app, `Delete "${workflow.name}"? The file will be moved to trash.`))) return;
       this.dirty = false;
       const file = this.plugin.workflowFileMap.get(workflow.id);
       if (file) {
-        await this.app.vault.trash(file, true);
+        await this.app.fileManager.trashFile(file);
       }
       await this.plugin.reloadWorkflows();
       this.activeWorkflowId = this.plugin.workflows[0]?.id ?? null;
       this.display();
-    });
+    })(); });
 
     if (isDefaultWorkflow(workflow.id)) {
       const resetBtn = buttonRow.createEl('button', { text: 'Reset to default', cls: 'alembic-reset-btn' });
-      resetBtn.addEventListener('click', async () => {
-        if (!confirm(`Reset "${workflow.name}" to its built-in default? Any edits will be overwritten.`)) return;
+      resetBtn.addEventListener('click', () => { void (async () => {
+        if (!(await confirmModal(this.app, `Reset "${workflow.name}" to its built-in default? Any edits will be overwritten.`))) return;
         this.dirty = false;
         const ok = await resetWorkflowToDefault(this.app, this.plugin.settings.workflowsFolder, workflow.id);
         await this.plugin.reloadWorkflows();
@@ -375,11 +376,11 @@ export class AlembicSettingTab extends PluginSettingTab {
         } else {
           alembicFlash(`Could not reset "${workflow.name}" — no bundled default found.`, 5000, 'error');
         }
-      });
+      })(); });
     }
 
     const saveBtn = buttonRow.createEl('button', { text: 'Save', cls: 'alembic-save-btn' });
-    saveBtn.addEventListener('click', async () => {
+    saveBtn.addEventListener('click', () => { void (async () => {
       if (!draft.name.trim()) { alembicFlash('Workflow name cannot be empty.', 5000, 'error'); return; }
       if (!this.plugin.settings.providers.some(p => p.id === draft.providerId)) {
         alembicFlash('The selected provider no longer exists. Choose another.', 5000, 'error');
@@ -392,7 +393,7 @@ export class AlembicSettingTab extends PluginSettingTab {
       await this.plugin.reloadWorkflows();
       this.activeWorkflowId = draft.id;
       this.display();
-    });
+    })(); });
   }
 
   // ── Providers tab ─────────────────────────────────────────────────────────
@@ -402,7 +403,7 @@ export class AlembicSettingTab extends PluginSettingTab {
     header.createSpan({ text: 'Providers', cls: 'alembic-sidebar-title' });
 
     const addBtn = header.createEl('button', { text: '+', cls: 'alembic-add-btn' });
-    addBtn.addEventListener('click', async () => {
+    addBtn.addEventListener('click', () => { void (async () => {
       const newProvider: ProviderProfile = {
         id: crypto.randomUUID(),
         name: 'New Provider',
@@ -414,7 +415,7 @@ export class AlembicSettingTab extends PluginSettingTab {
       await this.plugin.saveSettings();
       this.activeProviderId = newProvider.id;
       this.display();
-    });
+    })(); });
 
     const list = sidebar.createEl('ul', { cls: 'alembic-sidebar-list' });
     this.plugin.settings.providers.forEach(p => {
@@ -422,7 +423,7 @@ export class AlembicSettingTab extends PluginSettingTab {
         text: p.name,
         cls: 'alembic-sidebar-item' + (p.id === this.activeProviderId ? ' alembic-active' : ''),
       });
-      item.addEventListener('click', () => { if (!this.confirmIfDirty()) return; this.activeProviderId = p.id; this.display(); });
+      item.addEventListener('click', () => { void (async () => { if (!(await this.confirmIfDirty())) return; this.activeProviderId = p.id; this.display(); })(); });
     });
 
     if (!this.activeProviderId && this.plugin.settings.providers.length > 0) {
@@ -512,7 +513,7 @@ export class AlembicSettingTab extends PluginSettingTab {
       const connectBtn = connectRow.createEl('button', { text: 'Test Connection', cls: 'alembic-connect-btn' });
       const statusEl = connectRow.createSpan({ cls: 'alembic-connect-status' });
 
-      connectBtn.addEventListener('click', async () => {
+      connectBtn.addEventListener('click', () => { void (async () => {
         connectBtn.disabled = true;
         connectBtn.textContent = 'Connecting…';
         statusEl.textContent = '';
@@ -533,9 +534,10 @@ export class AlembicSettingTab extends PluginSettingTab {
           statusEl.textContent = `✓ Connected — ${result.models.length} model${result.models.length !== 1 ? 's' : ''} found`;
           statusEl.addClass('alembic-status-ok');
           if (modelChips && result.models.length > 0) {
-            modelChips.empty();
+            const chips = modelChips;
+            chips.empty();
             result.models.forEach(m => {
-              const chip = modelChips!.createEl('button', { text: m, cls: 'alembic-model-chip' });
+              const chip = chips.createEl('button', { text: m, cls: 'alembic-model-chip' });
               chip.type = 'button';
               chip.addEventListener('click', () => {
                 modelInput!.value = m;
@@ -544,7 +546,7 @@ export class AlembicSettingTab extends PluginSettingTab {
             });
           }
         }
-      });
+      })(); });
     };
 
     renderDynamic(draft.type);
@@ -558,7 +560,7 @@ export class AlembicSettingTab extends PluginSettingTab {
 
     if (!isBuiltIn) {
       const deleteBtn = buttonRow.createEl('button', { text: 'Delete', cls: 'alembic-delete-btn' });
-      deleteBtn.addEventListener('click', async () => {
+      deleteBtn.addEventListener('click', () => { void (async () => {
         const affected = this.plugin.workflows.filter(w => w.providerId === provider.id);
         const fallback = this.plugin.settings.providers.find(p => p.id !== provider.id);
         let msg = `Delete "${provider.name}"?`;
@@ -568,7 +570,7 @@ export class AlembicSettingTab extends PluginSettingTab {
             ? `\n\n${affected.length} workflow(s) use this provider (${names}) and will be reassigned to "${fallback.name}".`
             : `\n\n${affected.length} workflow(s) use this provider (${names}). No other provider exists — they will have no provider until you add one.`;
         }
-        if (!confirm(msg)) return;
+        if (!(await confirmModal(this.app, msg))) return;
         if (affected.length > 0 && fallback) {
           await Promise.all(affected.map(wf => {
             wf.providerId = fallback.id;
@@ -581,11 +583,11 @@ export class AlembicSettingTab extends PluginSettingTab {
         await this.plugin.saveSettings();
         await this.plugin.reloadWorkflows();
         this.display();
-      });
+      })(); });
     }
 
     const saveBtn = buttonRow.createEl('button', { text: 'Save', cls: 'alembic-save-btn' });
-    saveBtn.addEventListener('click', async () => {
+    saveBtn.addEventListener('click', () => { void (async () => {
       if (!draft.name.trim()) { alembicFlash('Provider name cannot be empty.', 5000, 'error'); return; }
       const idx = this.plugin.settings.providers.findIndex(p => p.id === provider.id);
       if (idx !== -1) {
@@ -594,6 +596,6 @@ export class AlembicSettingTab extends PluginSettingTab {
         await this.plugin.saveSettings();
         this.display();
       }
-    });
+    })(); });
   }
 }

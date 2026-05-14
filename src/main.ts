@@ -1,6 +1,6 @@
 import { App, Editor, Plugin, TFile } from 'obsidian';
 import { AlembicSettings, AlembicWorkflow, DEFAULT_PROVIDERS, DEFAULT_SETTINGS, DEFAULT_WORKFLOWS_FOLDER, FREEFORM_WORKFLOW_ID, HUMANIZE_WORKFLOW_ID, TOKEN_CONTEXT, TOKEN_SELECTION, isFullNoteWorkflow } from './types';
-import { WorkflowSelectorModal, FreeformModal } from './modal';
+import { WorkflowSelectorModal, FreeformModal, confirmModal } from './modal';
 import { AlembicSettingTab } from './settings';
 import { assembleUserMessage, runWithProvider, substituteTokens } from './runner';
 import { ensureWorkflowsFolder, loadWorkflowsFromVault, writeDefaultWorkflows, writeWorkflowFile, defaultFilenameFor } from './workflow-loader';
@@ -50,9 +50,13 @@ export default class AlembicPlugin extends Plugin {
 
     // If legacy workflows exist in settings.json, migrate them to vault files.
     // Do this BEFORE writing defaults so we don't create duplicate IDs from two
-    // different filename schemes.
+    // different filename schemes. `settings.workflows` is deprecated — read here
+    // only for this one-time migration.
+    /* eslint-disable-next-line @typescript-eslint/no-deprecated */
     if (this.settings.workflows && this.settings.workflows.length > 0) {
+      /* eslint-disable-next-line @typescript-eslint/no-deprecated */
       await this.migrateWorkflows(this.settings.workflows);
+      /* eslint-disable-next-line @typescript-eslint/no-deprecated */
       delete this.settings.workflows;
       await this.saveSettings();
     } else {
@@ -70,16 +74,16 @@ export default class AlembicPlugin extends Plugin {
 
     // Watch vault for changes inside the workflows folder
     this.registerEvent(this.app.vault.on('create', f => {
-      if (this.isWorkflowFile(f.path)) this.reloadWorkflows();
+      if (this.isWorkflowFile(f.path)) void this.reloadWorkflows();
     }));
     this.registerEvent(this.app.vault.on('modify', f => {
-      if (this.isWorkflowFile(f.path)) this.reloadWorkflows();
+      if (this.isWorkflowFile(f.path)) void this.reloadWorkflows();
     }));
     this.registerEvent(this.app.vault.on('delete', f => {
-      if (this.isWorkflowFile(f.path)) this.reloadWorkflows();
+      if (this.isWorkflowFile(f.path)) void this.reloadWorkflows();
     }));
     this.registerEvent(this.app.vault.on('rename', (f, oldPath) => {
-      if (this.isWorkflowFile(f.path) || this.isWorkflowFile(oldPath)) this.reloadWorkflows();
+      if (this.isWorkflowFile(f.path) || this.isWorkflowFile(oldPath)) void this.reloadWorkflows();
     }));
 
     // ── Workflow selector command ──────────────────────────────────────────────
@@ -90,7 +94,7 @@ export default class AlembicPlugin extends Plugin {
         new WorkflowSelectorModal(
           this.app,
           this.workflows,
-          (workflow) => this.executeWorkflow(editor, workflow)
+          (workflow) => { void this.executeWorkflow(editor, workflow); }
         ).open();
       },
     });
@@ -141,10 +145,10 @@ export default class AlembicPlugin extends Plugin {
         if (!live) { alembicFlash('This workflow no longer exists. Reload the plugin to update the command palette.', 5000, 'error'); return; }
         if (live.id === FREEFORM_WORKFLOW_ID) {
           new FreeformModal(this.app, live, (prompt, humanize) => {
-            this.executeWorkflow(editor, { ...live, prompt: `${TOKEN_CONTEXT}\n\n---\n\n${prompt}`, humanize });
+            void this.executeWorkflow(editor, { ...live, prompt: `${TOKEN_CONTEXT}\n\n---\n\n${prompt}`, humanize });
           }).open();
         } else {
-          this.executeWorkflow(editor, live);
+          void this.executeWorkflow(editor, live);
         }
       },
     });
@@ -181,7 +185,11 @@ export default class AlembicPlugin extends Plugin {
     const totalChars = userMessage.length + workflow.systemPrompt.length;
     if (totalChars > 100_000) {
       const approxKb = Math.round(totalChars / 1024);
-      if (!confirm(`The context being sent is ~${approxKb} KB (including linked notes). This may be slow or hit token limits. Continue?`)) return;
+      const proceed = await confirmModal(
+        this.app,
+        `The context being sent is ~${approxKb} KB (including linked notes). This may be slow or hit token limits. Continue?`,
+      );
+      if (!proceed) return;
     }
 
     const profile = this.settings.providers.find(p => p.id === workflow.providerId)
@@ -194,7 +202,7 @@ export default class AlembicPlugin extends Plugin {
 
     let msgIdx = 0;
     const run = alembicRunNotice(workflow.name);
-    const ticker = setInterval(() => {
+    const ticker = window.setInterval(() => {
       msgIdx = (msgIdx + 1) % WAIT_MESSAGES.length;
       run.setStatus(WAIT_MESSAGES[msgIdx]);
     }, 7000);
@@ -202,7 +210,7 @@ export default class AlembicPlugin extends Plugin {
     let cancelCurrent: (() => void) | null = null;
     run.addCancelButton(() => cancelCurrent?.());
 
-    const finish = () => { clearInterval(ticker); run.hide(); };
+    const finish = () => { window.clearInterval(ticker); run.hide(); };
 
     try {
       const resolvedWorkflow = { ...workflow, systemPrompt: substituteTokens(workflow.systemPrompt, selection, context) };
@@ -251,7 +259,7 @@ export default class AlembicPlugin extends Plugin {
   }
 
   async loadSettings(): Promise<void> {
-    const saved = await this.loadData();
+    const saved = (await this.loadData()) as Partial<AlembicSettings> | null;
     this.settings = Object.assign({}, DEFAULT_SETTINGS, saved);
 
     if (!this.settings.providers || this.settings.providers.length === 0) {
