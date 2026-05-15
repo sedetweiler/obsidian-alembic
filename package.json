@@ -1,6 +1,6 @@
 {
   "name": "obsidian-alembic",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Run Claude Code CLI workflows on your Obsidian notes",
   "main": "main.js",
   "scripts": {
