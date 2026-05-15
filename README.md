@@ -25,11 +25,8 @@ Alembic is a desktop-only plugin (it shells out to CLI tools and makes direct HT
 2. Copy them into `.obsidian/plugins/writers-alembic/` inside your vault
 3. Enable the plugin in Settings → Community plugins
 
-**Via BRAT:**
-1. Install [BRAT](https://github.com/TfTHacker/obsidian42-brat)
-2. Add the Alembic repository URL
-3. Enable the plugin
-4. On macOS, Obsidian's PATH does not include Homebrew by default. The plugin handles this automatically — no manual PATH configuration needed.
+**Via Community Plug-ins**
+You can browse for it inside of Obsidian, or use the direct link to the community page: https://community.obsidian.md/plugins/writers-alembic
 
 ---
 
