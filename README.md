@@ -48,11 +48,11 @@ claude   # follow the login prompts
 
 ### Anthropic API
 
-Enter your API key from [console.anthropic.com](https://console.anthropic.com). Hit **Test Connection** to fetch the live model list and pick one.
+Enter your API key from [console.anthropic.com](https://console.anthropic.com). Hit **Test connection** to fetch the live model list and pick one.
 
 ### Gemini API
 
-Enter your API key from [aistudio.google.com](https://aistudio.google.com). Hit **Test Connection** to see available models.
+Enter your API key from [aistudio.google.com](https://aistudio.google.com). Hit **Test connection** to see available models.
 
 ### Gemini CLI
 
@@ -60,7 +60,7 @@ Requires the [Gemini CLI](https://github.com/google-gemini/gemini-cli) to be ins
 
 ### Ollama
 
-Point the Base URL at your Ollama instance (default: `http://localhost:11434`). Hit **Test Connection** and your installed models will appear as chips below the model field. Click one to select it.
+Point the Base URL at your Ollama instance (default: `http://localhost:11434`). Hit **Test connection** and your installed models will appear as chips below the model field. Click one to select it.
 
 ### OpenAI
 
@@ -199,7 +199,7 @@ Two buttons in **Settings → Alembic → Workflows** help you stay current.
 
 **Reset to default** appears at the bottom of the detail panel for any built-in workflow. It overwrites that file with the prompt bundled in your installed version. Use it to undo edits you don't want to keep, or to pick up prompt improvements that shipped with a plugin update. Works offline.
 
-**↓ Pull new workflows** sits at the bottom of the workflow list. It checks the plugin's GitHub repo and adds any workflows that don't already exist in your vault. It never touches files you already have, including ones you've edited. Requires an internet connection.
+**↓ pull new workflows** sits at the bottom of the workflow list. It checks the plugin's GitHub repo and adds any workflows that don't already exist in your vault. It never touches files you already have, including ones you've edited. Requires an internet connection.
 
 Neither button affects workflows you've created yourself.
 

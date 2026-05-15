@@ -1,10 +1,12 @@
 import tsParser from '@typescript-eslint/parser';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
+import obsidianmd from 'eslint-plugin-obsidianmd';
 
 export default [
   {
     ignores: ['main.js', 'node_modules/**', '*.config.*'],
   },
+  ...obsidianmd.configs.recommended,
   {
     files: ['src/**/*.ts', 'tests/**/*.ts'],
     languageOptions: {
@@ -25,6 +27,21 @@ export default [
       'prefer-const': 'warn',
       'no-var': 'error',
       'eqeqeq': ['warn', 'always', { null: 'ignore' }],
+    },
+  },
+  {
+    files: ['tests/**/*.ts'],
+    languageOptions: {
+      globals: {
+        describe: 'readonly',
+        it: 'readonly',
+        expect: 'readonly',
+        jest: 'readonly',
+        beforeEach: 'readonly',
+        afterEach: 'readonly',
+        beforeAll: 'readonly',
+        afterAll: 'readonly',
+      },
     },
   },
 ];

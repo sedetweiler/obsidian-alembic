@@ -242,7 +242,7 @@ export class AlembicSettingTab extends PluginSettingTab {
       this.display();
     })(); });
 
-    const pullBtn = sidebar.createEl('button', { text: '↓ Pull new workflows', cls: 'alembic-restore-btn' });
+    const pullBtn = sidebar.createEl('button', { text: '↓ pull new workflows', cls: 'alembic-restore-btn' });
     pullBtn.addEventListener('click', () => { void (async () => {
       pullBtn.textContent = 'Checking…';
       pullBtn.disabled = true;
@@ -252,7 +252,7 @@ export class AlembicSettingTab extends PluginSettingTab {
         WORKFLOWS_REPO_API_URL,
       );
       pullBtn.disabled = false;
-      pullBtn.textContent = '↓ Pull new workflows';
+      pullBtn.textContent = '↓ pull new workflows';
       if (result.error) {
         alembicFlash(`Could not reach the repository: ${result.error}`, 6000, 'error');
         return;
@@ -510,7 +510,7 @@ export class AlembicSettingTab extends PluginSettingTab {
 
       // Connect button + status
       const connectRow = dynamicFields.createDiv('alembic-connect-row');
-      const connectBtn = connectRow.createEl('button', { text: 'Test Connection', cls: 'alembic-connect-btn' });
+      const connectBtn = connectRow.createEl('button', { text: 'Test connection', cls: 'alembic-connect-btn' });
       const statusEl = connectRow.createSpan({ cls: 'alembic-connect-status' });
 
       connectBtn.addEventListener('click', () => { void (async () => {
@@ -522,7 +522,7 @@ export class AlembicSettingTab extends PluginSettingTab {
         const result = await fetchProviderModels({ ...draft, type });
 
         connectBtn.disabled = false;
-        connectBtn.textContent = 'Test Connection';
+        connectBtn.textContent = 'Test connection';
 
         if (result.error) {
           statusEl.textContent = '✗ ' + result.error;
