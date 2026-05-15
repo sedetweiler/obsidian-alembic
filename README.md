@@ -88,6 +88,18 @@ Every workflow is also registered as its own command: **Writers Alembic: [Workfl
 
 Workflows whose prompt uses `{=SELECTION=}` require you to select text before running them. If nothing is selected, a flash message reminds you instead of running with empty input.
 
+### Where the output goes
+
+What happens with the AI's response depends on `replaceSelection` and whether you ran the workflow with text selected:
+
+- **Selection + `replaceSelection: true`** — the selected text is replaced with the output.
+- **No selection + `replaceSelection: true` + a prompt using `{=CONTEXT=}` (not `{=SELECTION=}`)** — Alembic treats this as a *full-note workflow* (like Lint or Add Structure) and replaces the entire document.
+- **No selection + `replaceSelection: false`** — the output is inserted at the cursor.
+
+### Canceling a run
+
+While a workflow is running, the notice in the corner has a **Cancel** button. Clicking it stops the in-flight request immediately.
+
 ### Freeform (Ask Claude)
 
 Selecting **Ask Claude** from the picker opens a text box where you type a one-off instruction. The current note is always included as context. Use the **Humanize output** toggle to run the result through the Humanize workflow automatically.
@@ -151,7 +163,7 @@ You are a ruthless copy editor. Your goal is maximum signal per word...
 | `name` | string | Display name shown in the picker and command palette |
 | `id` | string | Unique identifier. Must not change after creation. |
 | `prompt` | string | The user message sent to the AI. Use tokens (see below). |
-| `replaceSelection` | boolean | `true` replaces selected text; `false` inserts at cursor |
+| `replaceSelection` | boolean | `true` replaces the selected text — or the entire document if you ran without a selection and the prompt uses `{=CONTEXT=}`. `false` inserts at the cursor. See [[#Where the output goes]]. |
 | `humanize` | boolean | Runs a second Humanize pass on the output if `true` |
 | `linkDepth` | number (0–3) | How many levels of `[[wikilinks]]` to follow and include as context. Default: `1`. Set to `0` to disable. |
 | `providerId` | string | ID of the provider profile to use |
@@ -162,7 +174,7 @@ You are a ruthless copy editor. Your goal is maximum signal per word...
 
 ## Token placeholders
 
-Use these placeholders in the `prompt` field to inject live note content at run time:
+Use these placeholders to inject live note content at run time. They substitute in **both** the `prompt` field and the file body (system prompt), so the system prompt can reference the same content the AI is about to see.
 
 | Token | Replaced with |
 |---|---|
@@ -177,11 +189,15 @@ If you leave `prompt` blank, Alembic sends whatever is available: selected text 
 
 When `linkDepth` is set to 1 or higher, Alembic follows `[[wikilinks]]` in your note and includes the content of the linked notes as additional context sent to the AI. This gives the model a richer picture of related material without you having to copy-paste.
 
+Set it per workflow in **Settings → Writers Alembic → Workflows**: pick a workflow and use the **Link depth** dropdown in the detail panel. You can also set `linkDepth: 0–3` directly in the workflow file's frontmatter.
+
 - **0** — No expansion. Only the current note is sent.
 - **1** (default) — Includes notes linked directly from the current note.
 - **2–3** — Follows links recursively (links in linked notes, etc.). Useful for deeply interlinked knowledge bases but can produce large payloads.
 
-If the combined context exceeds ~100 KB, Alembic will show a confirmation prompt before sending.
+**How linked content gets injected:** each linked note is appended after the current note's content, separated by `---` and a `**Linked note: <basename>**` header. A note reachable via multiple paths is included only once per run, so cycles are safe.
+
+Link expansion reads files directly from your vault — no network calls, works offline. If the combined context exceeds ~100 KB, Alembic will show a confirmation prompt before sending.
 
 ---
 
