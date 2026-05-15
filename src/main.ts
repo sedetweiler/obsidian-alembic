@@ -45,30 +45,6 @@ export default class AlembicPlugin extends Plugin {
   async onload(): Promise<void> {
     await this.loadSettings();
 
-    // Ensure the workflows folder exists
-    await ensureWorkflowsFolder(this.app, this.settings.workflowsFolder);
-
-    // If legacy workflows exist in settings.json, migrate them to vault files.
-    // Do this BEFORE writing defaults so we don't create duplicate IDs from two
-    // different filename schemes. The `workflows` field only exists in pre-1.x
-    // saved data, so it's read via the LegacySettings shape for this one-time
-    // migration.
-    const legacy = this.settings as AlembicSettings & LegacySettings;
-    if (legacy.workflows && legacy.workflows.length > 0) {
-      await this.migrateWorkflows(legacy.workflows);
-      delete legacy.workflows;
-      await this.saveSettings();
-    } else {
-      // No legacy data — seed defaults if the folder is empty
-      const initial = await loadWorkflowsFromVault(this.app, this.settings.workflowsFolder);
-      if (initial.workflows.length === 0) {
-        await writeDefaultWorkflows(this.app, this.settings.workflowsFolder);
-      }
-    }
-
-    // Load workflows from vault into memory
-    await this.reloadWorkflows();
-
     this.addSettingTab(new AlembicSettingTab(this.app, this));
 
     // Watch vault for changes inside the workflows folder
@@ -86,6 +62,8 @@ export default class AlembicPlugin extends Plugin {
     }));
 
     // ── Workflow selector command ──────────────────────────────────────────────
+    // Callback reads this.workflows at invoke time, so it's safe to register
+    // before workflows have loaded.
     this.addCommand({
       id: 'open-workflow-selector',
       name: 'Run workflow',
@@ -98,8 +76,37 @@ export default class AlembicPlugin extends Plugin {
       },
     });
 
-    // ── Per-workflow direct commands ───────────────────────────────────────────
-    // Registered at load time — reload plugin to pick up new workflow files
+    // Vault-dependent setup is deferred to onLayoutReady. On cold start the
+    // vault file index may not be populated yet, in which case loading
+    // workflows returns an empty list and the per-workflow command loop below
+    // registers zero commands.
+    this.app.workspace.onLayoutReady(() => { void this.initializeWorkflows(); });
+  }
+
+  private async initializeWorkflows(): Promise<void> {
+    await ensureWorkflowsFolder(this.app, this.settings.workflowsFolder);
+
+    // If legacy workflows exist in settings.json, migrate them to vault files.
+    // Do this BEFORE writing defaults so we don't create duplicate IDs from two
+    // different filename schemes. The `workflows` field only exists in pre-1.x
+    // saved data, so it's read via the LegacySettings shape for this one-time
+    // migration.
+    const legacy = this.settings as AlembicSettings & LegacySettings;
+    if (legacy.workflows && legacy.workflows.length > 0) {
+      await this.migrateWorkflows(legacy.workflows);
+      delete legacy.workflows;
+      await this.saveSettings();
+    } else {
+      const initial = await loadWorkflowsFromVault(this.app, this.settings.workflowsFolder);
+      if (initial.workflows.length === 0) {
+        await writeDefaultWorkflows(this.app, this.settings.workflowsFolder);
+      }
+    }
+
+    await this.reloadWorkflows();
+
+    // Per-workflow direct commands. Registered once after workflows load.
+    // New workflow files added later still require a plugin reload to appear.
     for (const workflow of this.workflows) {
       this.registerWorkflowCommand(workflow);
     }

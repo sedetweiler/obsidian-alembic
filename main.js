@@ -2069,19 +2069,6 @@ var AlembicPlugin = class extends import_obsidian5.Plugin {
   }
   async onload() {
     await this.loadSettings();
-    await ensureWorkflowsFolder(this.app, this.settings.workflowsFolder);
-    const legacy = this.settings;
-    if (legacy.workflows && legacy.workflows.length > 0) {
-      await this.migrateWorkflows(legacy.workflows);
-      delete legacy.workflows;
-      await this.saveSettings();
-    } else {
-      const initial = await loadWorkflowsFromVault(this.app, this.settings.workflowsFolder);
-      if (initial.workflows.length === 0) {
-        await writeDefaultWorkflows(this.app, this.settings.workflowsFolder);
-      }
-    }
-    await this.reloadWorkflows();
     this.addSettingTab(new AlembicSettingTab(this.app, this));
     this.registerEvent(this.app.vault.on("create", (f) => {
       if (this.isWorkflowFile(f.path))
@@ -2112,6 +2099,24 @@ var AlembicPlugin = class extends import_obsidian5.Plugin {
         ).open();
       }
     });
+    this.app.workspace.onLayoutReady(() => {
+      void this.initializeWorkflows();
+    });
+  }
+  async initializeWorkflows() {
+    await ensureWorkflowsFolder(this.app, this.settings.workflowsFolder);
+    const legacy = this.settings;
+    if (legacy.workflows && legacy.workflows.length > 0) {
+      await this.migrateWorkflows(legacy.workflows);
+      delete legacy.workflows;
+      await this.saveSettings();
+    } else {
+      const initial = await loadWorkflowsFromVault(this.app, this.settings.workflowsFolder);
+      if (initial.workflows.length === 0) {
+        await writeDefaultWorkflows(this.app, this.settings.workflowsFolder);
+      }
+    }
+    await this.reloadWorkflows();
     for (const workflow of this.workflows) {
       this.registerWorkflowCommand(workflow);
     }
