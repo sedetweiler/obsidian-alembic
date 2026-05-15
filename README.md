@@ -221,6 +221,24 @@ Neither button affects workflows you've created yourself.
 
 ---
 
+## Privacy & data flow
+
+Alembic is local-first. Nothing leaves your vault except the requests you configure, sent directly to the AI providers you set up — no telemetry, no analytics, no intermediate server.
+
+**Network requests made by the plugin:**
+
+- **AI provider calls.** When you run a workflow, the assembled prompt (selection / current note / `[[wikilink]]`-expanded notes per `linkDepth`) is sent to the provider configured on that workflow. HTTP-based providers (Anthropic, Gemini, OpenAI, OpenRouter, Ollama) are called directly from your machine; CLI providers (Claude CLI, Gemini CLI) shell out to the local CLI binary.
+- **GitHub, opt-in.** Clicking **↓ pull new workflows** fetches the workflow template list from `api.github.com/repos/sedetweiler/obsidian-alembic/contents/workflows` and then downloads any new `.md` files from `raw.githubusercontent.com`. Nothing happens unless you click it.
+
+**Vault access:**
+
+- **Reads** the workflows folder (default `_alembic`), the active note you're operating on, and any notes reachable through `[[wikilinks]]` up to your configured `linkDepth`. To locate the workflows folder, Obsidian only exposes a full-vault file list, so Alembic enumerates it once on load and filters down to its own folder — it doesn't read files outside those paths.
+- **Writes** workflow `.md` files in your workflows folder (when you create, edit, reset to default, or pull new ones), and the active note (when a workflow's output is inserted at the cursor or replaces a selection / the whole document).
+
+That's the full surface area.
+
+---
+
 ## Sharing workflows
 
 Because workflows are just Markdown files, sharing is the same as sharing any note:
