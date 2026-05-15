@@ -10,8 +10,8 @@ AI writing workflows for Obsidian, with prompts you can create and share. Workfl
 ## Quick start
 
 1. Install the plugin (see [[#Installation]])
-2. Open **Settings → Alembic → Providers** and configure at least one AI backend
-3. Open any note, optionally select some text, and run **Alembic: Run workflow** from the command palette
+2. Open **Settings → Writers Alembic → Providers** and configure at least one AI backend
+3. Open any note, optionally select some text, and run **Writers Alembic: Run workflow** from the command palette
 4. Pick a workflow and see the result in your note
 
 ---
@@ -22,7 +22,7 @@ Alembic is a desktop-only plugin (it shells out to CLI tools and makes direct HT
 
 **Manual install:**
 1. Download `main.js`, `styles.css`, and `manifest.json` from the latest release
-2. Copy them into `.obsidian/plugins/obsidian-alembic/` inside your vault
+2. Copy them into `.obsidian/plugins/writers-alembic/` inside your vault
 3. Enable the plugin in Settings → Community plugins
 
 **Via BRAT:**
@@ -35,7 +35,7 @@ Alembic is a desktop-only plugin (it shells out to CLI tools and makes direct HT
 
 ## Providers
 
-Go to **Settings → Alembic → Providers** to add and configure backends. You can have as many as you like; each workflow can target a different one.
+Go to **Settings → Writers Alembic → Providers** to add and configure backends. You can have as many as you like; each workflow can target a different one.
 
 ### Claude CLI (default, no API key needed)
 
@@ -78,11 +78,11 @@ Enter your API key from [openrouter.ai](https://openrouter.ai). One key covers d
 
 ### Command palette
 
-Run **Alembic: Run workflow** to open the picker. The freeform entry is always pinned at the top; your saved workflows follow. Fuzzy search works across all names.
+Run **Writers Alembic: Run workflow** to open the picker. The freeform entry is always pinned at the top; your saved workflows follow. Fuzzy search works across all names.
 
 ### Direct commands
 
-Every workflow is also registered as its own command: **Alembic: [Workflow Name]**. Assign a hotkey to any workflow in Settings → Hotkeys for one-keystroke access.
+Every workflow is also registered as its own command: **Writers Alembic: [Workflow Name]**. Assign a hotkey to any workflow in Settings → Hotkeys for one-keystroke access.
 
 ### Selection required
 
@@ -195,7 +195,7 @@ If the combined context exceeds ~100 KB, Alembic will show a confirmation prompt
 
 ## Updating workflows
 
-Two buttons in **Settings → Alembic → Workflows** help you stay current.
+Two buttons in **Settings → Writers Alembic → Workflows** help you stay current.
 
 **Reset to default** appears at the bottom of the detail panel for any built-in workflow. It overwrites that file with the prompt bundled in your installed version. Use it to undo edits you don't want to keep, or to pick up prompt improvements that shipped with a plugin update. Works offline.
 
