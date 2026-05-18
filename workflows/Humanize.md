@@ -1,7 +1,7 @@
 ---
 name: "🗣️ Humanize"
 id: "__humanize__"
-prompt: ""
+prompt: "{=CONTEXT=}"
 replaceSelection: true
 humanize: false
 providerId: "default-claude-cli"
