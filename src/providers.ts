@@ -25,12 +25,36 @@ export interface ProviderMeta {
 
 export const PROVIDER_META: ProviderMeta[] = [
   {
+    type: 'anthropic',
+    label: 'Anthropic API',
+    isCli: false,
+    needsApiKey: true,
+    modelHint: 'e.g. claude-opus-4-5, claude-sonnet-4-5',
+    knownModels: ['claude-opus-4-5', 'claude-sonnet-4-5', 'claude-haiku-3-5'],
+  },
+  {
     type: 'claude-cli',
     label: 'Claude CLI',
     isCli: true,
     needsApiKey: false,
     modelHint: '',
     knownModels: [],
+  },
+  {
+    type: 'codex-cli',
+    label: 'Codex CLI',
+    isCli: true,
+    needsApiKey: false,
+    modelHint: '',
+    knownModels: [],
+  },
+  {
+    type: 'gemini',
+    label: 'Gemini API',
+    isCli: false,
+    needsApiKey: true,
+    modelHint: 'e.g. gemini-2.0-flash, gemini-1.5-pro',
+    knownModels: ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-pro', 'gemini-1.5-flash'],
   },
   {
     type: 'gemini-cli',
@@ -41,12 +65,13 @@ export const PROVIDER_META: ProviderMeta[] = [
     knownModels: [],
   },
   {
-    type: 'anthropic',
-    label: 'Anthropic API',
+    type: 'ollama',
+    label: 'Ollama',
     isCli: false,
-    needsApiKey: true,
-    modelHint: 'e.g. claude-opus-4-5, claude-sonnet-4-5',
-    knownModels: ['claude-opus-4-5', 'claude-sonnet-4-5', 'claude-haiku-3-5'],
+    needsApiKey: false,
+    defaultBaseUrl: 'http://localhost:11434',
+    modelHint: 'e.g. llama3.2, llama3.3:70b',
+    knownModels: [],
   },
   {
     type: 'openai',
@@ -71,23 +96,6 @@ export const PROVIDER_META: ProviderMeta[] = [
       'google/gemini-2.0-flash',
       'meta-llama/llama-3.3-70b-instruct',
     ],
-  },
-  {
-    type: 'ollama',
-    label: 'Ollama',
-    isCli: false,
-    needsApiKey: false,
-    defaultBaseUrl: 'http://localhost:11434',
-    modelHint: 'e.g. llama3.2, llama3.3:70b',
-    knownModels: [],
-  },
-  {
-    type: 'gemini',
-    label: 'Gemini API',
-    isCli: false,
-    needsApiKey: true,
-    modelHint: 'e.g. gemini-2.0-flash, gemini-1.5-pro',
-    knownModels: ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-pro', 'gemini-1.5-flash'],
   },
 ];
 

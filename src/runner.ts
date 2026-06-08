@@ -219,6 +219,15 @@ function runGeminiCli(systemPrompt: string, userMessage: string): RunHandle {
   return cliRunHandle('gemini', [], fullMessage, 'Gemini CLI not found.');
 }
 
+function runCodexCli(systemPrompt: string, userMessage: string): RunHandle {
+  // Codex has no system-prompt flag, so prepend it to the message.
+  const fullMessage = systemPrompt.trim()
+    ? `${systemPrompt.trim()}\n\n${userMessage}`
+    : userMessage;
+  // `codex exec -` runs non-interactively and reads the prompt from stdin.
+  return cliRunHandle('codex', ['exec', '-'], fullMessage, 'Codex CLI not found.');
+}
+
 // ── HTTP runners ──────────────────────────────────────────────────────────────
 
 function runAnthropic(profile: ProviderProfile, systemPrompt: string, userMessage: string): RunHandle {
@@ -321,6 +330,7 @@ export function runWithProvider(
     case 'ollama':      return runOllama(profile, sys, userMessage);
     case 'gemini':      return runGemini(profile, sys, userMessage);
     case 'gemini-cli':  return runGeminiCli(sys, userMessage);
+    case 'codex-cli':   return runCodexCli(sys, userMessage);
     case 'openai':
     case 'openrouter':  return runOpenAICompatible(profile, sys, userMessage);
     case 'claude-cli':
@@ -356,6 +366,11 @@ export async function fetchProviderModels(profile: ProviderProfile): Promise<Mod
         return (await cliOnPath('gemini'))
           ? { models: [] }
           : { models: [], error: 'Gemini CLI not found — install it from https://github.com/google-gemini/gemini-cli' };
+      }
+      case 'codex-cli': {
+        return (await cliOnPath('codex'))
+          ? { models: [] }
+          : { models: [], error: 'Codex CLI not found — install it from https://github.com/openai/codex' };
       }
       case 'anthropic': {
         const res = await nodeRequest('https://api.anthropic.com/v1/models', {

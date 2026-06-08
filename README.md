@@ -43,6 +43,15 @@ npm install -g @anthropic-ai/claude-code
 claude   # follow the login prompts
 ```
 
+### Codex CLI (no API key needed)
+
+Requires the [Codex CLI](https://github.com/openai/codex) to be installed and authenticated. Runs `codex exec` under the hood. No API key required in the plugin; authentication is handled by the CLI itself.
+
+```
+npm install -g @openai/codex
+codex   # follow the login prompts
+```
+
 ### Anthropic API
 
 Enter your API key from [console.anthropic.com](https://console.anthropic.com). Hit **Test connection** to fetch the live model list and pick one.
@@ -224,7 +233,7 @@ Alembic is local-first. Nothing leaves your vault except the requests you config
 
 **Network requests made by the plugin:**
 
-- **AI provider calls.** When you run a workflow, the assembled prompt (selection / current note / `[[wikilink]]`-expanded notes per `linkDepth`) is sent to the provider configured on that workflow. HTTP-based providers (Anthropic, Gemini, OpenAI, OpenRouter, Ollama) are called directly from your machine; CLI providers (Claude CLI, Gemini CLI) shell out to the local CLI binary.
+- **AI provider calls.** When you run a workflow, the assembled prompt (selection / current note / `[[wikilink]]`-expanded notes per `linkDepth`) is sent to the provider configured on that workflow. HTTP-based providers (Anthropic, Gemini, OpenAI, OpenRouter, Ollama) are called directly from your machine; CLI providers (Claude CLI, Codex CLI, Gemini CLI) shell out to the local CLI binary.
 - **GitHub, opt-in.** Clicking **↓ pull new workflows** fetches the workflow template list from `api.github.com/repos/sedetweiler/obsidian-alembic/contents/workflows` and then downloads any new `.md` files from `raw.githubusercontent.com`. Nothing happens unless you click it.
 
 **Vault access:**

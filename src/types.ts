@@ -1,6 +1,6 @@
 // ── Provider profiles ────────────────────────────────────────────────────────
 
-export type ProviderType = 'claude-cli' | 'gemini-cli' | 'anthropic' | 'openai' | 'openrouter' | 'ollama' | 'gemini';
+export type ProviderType = 'anthropic' | 'claude-cli' | 'codex-cli' | 'gemini' | 'gemini-cli' | 'ollama' | 'openai' | 'openrouter';
 
 export interface ProviderProfile {
   id: string;
