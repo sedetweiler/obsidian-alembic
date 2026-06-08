@@ -136,11 +136,18 @@ function httpRunHandle(run: () => Promise<RunResult>): RunHandle {
 /**
  * Runs a CLI command, pipes `input` to stdin, and returns its stdout on success
  * or a classified error on non-zero exit. `notFoundMessage` is returned when the
- * binary cannot be found on PATH.
+ * binary cannot be found on PATH. `transformOutput`, if given, maps raw stdout to
+ * the final output (used to extract the answer from structured CLI output).
  */
 const CLI_TIMEOUT_MS = 300_000; // 5 minutes
 
-function cliRunHandle(cmd: string, args: string[], input: string, notFoundMessage: string): RunHandle {
+function cliRunHandle(
+  cmd: string,
+  args: string[],
+  input: string,
+  notFoundMessage: string,
+  transformOutput?: (stdout: string) => string,
+): RunHandle {
   let settled = false;
   let proc: ReturnType<typeof spawn> | null = null;
   let externalResolve!: (r: RunResult) => void;
@@ -176,7 +183,7 @@ function cliRunHandle(cmd: string, args: string[], input: string, notFoundMessag
 
     proc.on('close', (code: number | null) => {
       if (code === 0) {
-        settle({ output: stdout.trim() });
+        settle({ output: transformOutput ? transformOutput(stdout) : stdout.trim() });
       } else {
         const combined = (stderr + ' ' + stdout).toLowerCase();
         settle({ output: '', error: classifyError(combined, stderr.trim(), code) });
@@ -219,13 +226,38 @@ function runGeminiCli(systemPrompt: string, userMessage: string): RunHandle {
   return cliRunHandle('gemini', [], fullMessage, 'Gemini CLI not found.');
 }
 
+/**
+ * Pulls the agent's final answer out of `codex exec --json` output (JSONL).
+ * Each line is an event; the answer is the last `agent_message` item. Falls back
+ * to the raw text if no such event is found (e.g. an unexpected format change).
+ */
+function extractCodexMessage(stdout: string): string {
+  let last = '';
+  for (const line of stdout.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    try {
+      const evt = JSON.parse(trimmed) as { type?: string; item?: { type?: string; text?: string } };
+      if (evt.type === 'item.completed' && evt.item?.type === 'agent_message' && typeof evt.item.text === 'string') {
+        last = evt.item.text;
+      }
+    } catch {
+      // Not a JSON line — ignore.
+    }
+  }
+  return last.trim() || stdout.trim();
+}
+
 function runCodexCli(systemPrompt: string, userMessage: string): RunHandle {
   // Codex has no system-prompt flag, so prepend it to the message.
   const fullMessage = systemPrompt.trim()
     ? `${systemPrompt.trim()}\n\n${userMessage}`
     : userMessage;
-  // `codex exec -` runs non-interactively and reads the prompt from stdin.
-  return cliRunHandle('codex', ['exec', '-'], fullMessage, 'Codex CLI not found.');
+  // `codex exec -` reads the prompt from stdin and runs non-interactively.
+  // --skip-git-repo-check: Obsidian's working dir may not be a trusted/git folder.
+  // --json: emit JSONL events so we can extract just the agent's final message.
+  const args = ['exec', '--skip-git-repo-check', '--json', '-'];
+  return cliRunHandle('codex', args, fullMessage, 'Codex CLI not found.', extractCodexMessage);
 }
 
 // ── HTTP runners ──────────────────────────────────────────────────────────────
