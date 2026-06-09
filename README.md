@@ -241,6 +241,10 @@ Alembic is local-first. Nothing leaves your vault except the requests you config
 - **Reads** the workflows folder (default `_alembic`), the active note you're operating on, and any notes reachable through `[[wikilinks]]` up to your configured `linkDepth`. To locate the workflows folder, Obsidian only exposes a full-vault file list, so Alembic enumerates it once on load and filters down to its own folder — it doesn't read files outside those paths.
 - **Writes** workflow `.md` files in your workflows folder (when you create, edit, reset to default, or pull new ones), and the active note (when a workflow's output is inserted at the cursor or replaces a selection / the whole document).
 
+**Shell execution:**
+
+- Automated plugin scanners flag Alembic for using `child_process` and warn that it has "full control over the system." That is the standard worst-case label for *any* plugin that can launch a local program — it describes the capability, not how Alembic uses it. In practice Alembic only spawns the specific CLI you configure (`claude`, `gemini`, or `codex`), with hardcoded arguments and no shell (`spawn` without `shell: true`). Your note content is passed to the CLI over stdin, never interpolated onto the command line — so the plugin never runs commands derived from your notes or workflows.
+
 That's the full surface area.
 
 ---
