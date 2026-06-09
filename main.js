@@ -1890,39 +1890,37 @@ var AlembicSettingTab = class extends import_obsidian4.PluginSettingTab {
       renderDynamic(draft.type);
     });
     const buttonRow = detail.createDiv("alembic-button-row");
-    if (!isBuiltIn) {
-      const deleteBtn = buttonRow.createEl("button", { text: "Delete", cls: "alembic-delete-btn" });
-      deleteBtn.addEventListener("click", () => {
-        void (async () => {
-          var _a3, _b;
-          const affected = this.plugin.workflows.filter((w) => w.providerId === provider.id);
-          const fallback = this.plugin.settings.providers.find((p) => p.id !== provider.id);
-          let msg = `Delete "${provider.name}"?`;
-          if (affected.length > 0) {
-            const names = affected.map((w) => w.name).join(", ");
-            msg += fallback ? `
+    const deleteBtn = buttonRow.createEl("button", { text: "Delete", cls: "alembic-delete-btn" });
+    deleteBtn.addEventListener("click", () => {
+      void (async () => {
+        var _a3, _b;
+        const affected = this.plugin.workflows.filter((w) => w.providerId === provider.id);
+        const fallback = this.plugin.settings.providers.find((p) => p.id !== provider.id);
+        let msg = `Delete "${provider.name}"?`;
+        if (affected.length > 0) {
+          const names = affected.map((w) => w.name).join(", ");
+          msg += fallback ? `
 
 ${affected.length} workflow(s) use this provider (${names}) and will be reassigned to "${fallback.name}".` : `
 
 ${affected.length} workflow(s) use this provider (${names}). No other provider exists \u2014 they will have no provider until you add one.`;
-          }
-          if (!await confirmModal(this.app, msg))
-            return;
-          if (affected.length > 0 && fallback) {
-            await Promise.all(affected.map((wf) => {
-              wf.providerId = fallback.id;
-              const file = this.plugin.workflowFileMap.get(wf.id);
-              return file ? writeWorkflowFile(this.app, this.plugin.settings.workflowsFolder, file.name, wf) : Promise.resolve();
-            }));
-          }
-          this.plugin.settings.providers = this.plugin.settings.providers.filter((p) => p.id !== provider.id);
-          this.activeProviderId = (_b = (_a3 = this.plugin.settings.providers[0]) == null ? void 0 : _a3.id) != null ? _b : null;
-          await this.plugin.saveSettings();
-          await this.plugin.reloadWorkflows();
-          this.display();
-        })();
-      });
-    }
+        }
+        if (!await confirmModal(this.app, msg))
+          return;
+        if (affected.length > 0 && fallback) {
+          await Promise.all(affected.map((wf) => {
+            wf.providerId = fallback.id;
+            const file = this.plugin.workflowFileMap.get(wf.id);
+            return file ? writeWorkflowFile(this.app, this.plugin.settings.workflowsFolder, file.name, wf) : Promise.resolve();
+          }));
+        }
+        this.plugin.settings.providers = this.plugin.settings.providers.filter((p) => p.id !== provider.id);
+        this.activeProviderId = (_b = (_a3 = this.plugin.settings.providers[0]) == null ? void 0 : _a3.id) != null ? _b : null;
+        await this.plugin.saveSettings();
+        await this.plugin.reloadWorkflows();
+        this.display();
+      })();
+    });
     const saveBtn = buttonRow.createEl("button", { text: "Save", cls: "alembic-save-btn" });
     saveBtn.addEventListener("click", () => {
       void (async () => {
