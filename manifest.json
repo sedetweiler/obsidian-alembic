@@ -1,7 +1,7 @@
 {
   "id": "writers-alembic",
   "name": "Writers Alembic",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "minAppVersion": "1.8.7",
   "description": "Sane AI writing workflow tool. Workflows live in your vault as Markdown files — edit, share, and run them on any note.",
   "author": "Scott E. Detweiler",
